@@ -1,0 +1,39 @@
+{
+  "name": "vlaecci",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "24": "^0.0.0",
+    "@vercel/blob": "^2.5.0",
+    "bcryptjs": "^2.4.3",
+    "framer-motion": "^11.0.0",
+    "jose": "^5.2.0",
+    "lucide-react": "^0.400.0",
+    "next": "^14.2.0",
+    "pg": "^8.13.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.19.39",
+    "@types/pg": "^8.11.10",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3",
+    "vercel": "^54.18.7"
+  }
+}

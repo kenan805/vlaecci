@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-playfair: 'Playfair Display', Georgia, serif;
+  --font-dm-sans: 'DM Sans', system-ui, sans-serif;
+  --color-cream-50: #FDFCFA;
+  --color-cream-100: #FAF8F4;
+  --color-sand-200: #DED5C8;
+  --color-brown-100: #6B5344;
+  --color-accent-rose: #C9A88E;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-dm-sans);
+  background-color: var(--color-cream-50);
+  color: var(--color-brown-100);
+}
+
+/* Custom scrollbar - soft aesthetic */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF8F4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DED5C8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C4B8A8;
+}

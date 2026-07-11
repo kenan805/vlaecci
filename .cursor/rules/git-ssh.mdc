@@ -1,0 +1,29 @@
+---
+description: Git and SSH best practices for this project
+globs: "**/.gitignore"
+alwaysApply: false
+---
+
+# Git & SSH Best Practices
+
+## SSH Keys - Never Commit
+
+- **Never** commit private keys (`id_ed25519`, `new`, or any file without `.pub`)
+- **Never** commit `.pub` files in the project root—keep keys in `~/.ssh/`
+- If keys were committed: `git rm --cached <file>`, add to `.gitignore`, commit removal
+- Generate keys in default location: `ssh-keygen -t ed25519 -C "your@email.com"` then press Enter for defaults
+
+## Passphrase
+
+- Use empty passphrase for convenience, or set one for extra security
+- If you forget the passphrase: generate a new key pair and add the new public key to GitHub
+
+## GitHub Authentication
+
+- Use SSH (not HTTPS) for push/pull: `git remote set-url origin git@github.com:user/repo.git`
+- Add key to agent: `ssh-add ~/.ssh/id_ed25519` (or path to your key)
+- Verify: `ssh -T git@github.com`
+
+## .gitignore
+
+Ensure these are ignored: `new`, `new.pub`, `*.pem`, `.env`, `node_modules`, `.next`
