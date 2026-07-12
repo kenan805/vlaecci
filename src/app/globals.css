@@ -5,21 +5,88 @@
 :root {
   --font-playfair: 'Playfair Display', Georgia, serif;
   --font-dm-sans: 'DM Sans', system-ui, sans-serif;
-  --color-cream-50: #FDFCFA;
-  --color-cream-100: #FAF8F4;
-  --color-sand-200: #DED5C8;
-  --color-brown-100: #6B5344;
-  --color-accent-rose: #C9A88E;
+
+  /* Brand palette (light) — RGB channels for Tailwind alpha support */
+  --c-white: 255 255 255;
+  --c-cream-50: 253 252 250;
+  --c-cream-100: 250 248 244;
+  --c-cream-200: 245 241 233;
+  --c-cream-300: 237 230 218;
+  --c-cream-400: 224 213 196;
+  --c-sand-50: 247 244 239;
+  --c-sand-100: 237 232 224;
+  --c-sand-200: 222 213 200;
+  --c-sand-300: 196 184 168;
+  --c-sand-400: 168 152 133;
+  --c-brown-50: 139 115 85;
+  --c-brown-100: 107 83 68;
+  --c-brown-200: 90 74 61;
+  --c-brown-300: 74 61 50;
+  --c-brown-400: 61 51 41;
+  --c-accent-rose: 201 168 142;
+  --c-accent-sage: 156 175 136;
+
+  /* legacy aliases */
+  --color-cream-50: #fdfcfa;
+  --color-brown-100: #6b5344;
+
+  --scrollbar-track: 250 248 244;
+  --scrollbar-thumb: 222 213 200;
+  --scrollbar-thumb-hover: 196 184 168;
+}
+
+.dark {
+  /* Warm dark theme — backgrounds go dark, text/accents go warm-light */
+  --c-white: 33 27 22;
+  --c-cream-50: 22 18 15;
+  --c-cream-100: 28 23 19;
+  --c-cream-200: 37 30 24;
+  --c-cream-300: 47 39 31;
+  --c-cream-400: 58 48 39;
+  --c-sand-50: 37 30 24;
+  --c-sand-100: 45 37 30;
+  --c-sand-200: 58 49 40;
+  --c-sand-300: 80 68 56;
+  --c-sand-400: 124 110 94;
+  --c-brown-50: 168 152 127;
+  --c-brown-100: 178 164 148;
+  --c-brown-200: 214 205 193;
+  --c-brown-300: 236 229 217;
+  --c-brown-400: 246 240 231;
+  --c-accent-rose: 216 186 160;
+  --c-accent-sage: 168 191 148;
+
+  --scrollbar-track: 28 23 19;
+  --scrollbar-thumb: 58 49 40;
+  --scrollbar-thumb-hover: 80 68 56;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
+/* Make browser autofill match the theme instead of the default yellow */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: rgb(var(--c-brown-300));
+  -webkit-box-shadow: 0 0 0 1000px rgb(var(--c-white)) inset;
+  caret-color: rgb(var(--c-brown-300));
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Disable transitions during theme switch so var-based colors flip instantly (no stuck states) */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
+}
+
 body {
   font-family: var(--font-dm-sans);
-  background-color: var(--color-cream-50);
-  color: var(--color-brown-100);
+  background-color: rgb(var(--c-cream-50));
+  color: rgb(var(--c-brown-100));
 }
 
 /* Custom scrollbar - soft aesthetic */
@@ -29,14 +96,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #FAF8F4;
+  background: rgb(var(--scrollbar-track));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #DED5C8;
+  background: rgb(var(--scrollbar-thumb));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #C4B8A8;
+  background: rgb(var(--scrollbar-thumb-hover));
 }

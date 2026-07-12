@@ -56,7 +56,8 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
             p.price, p.images, c.name AS category_name
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
-     WHERE p.slug = $1 AND COALESCE(p.status, 'active') = 'active'`,
+     WHERE p.slug = $1 AND COALESCE(p.status, 'active') = 'active'
+       AND COALESCE(c.is_active, true) = true`,
     [slug]
   )
 

@@ -173,6 +173,7 @@ async function initSchema() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS how_to_use TEXT DEFAULT '';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
     ALTER TABLE discount_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER;
     ALTER TABLE discount_codes ADD COLUMN IF NOT EXISTS usage_count INTEGER DEFAULT 0;
     ALTER TABLE discount_codes ADD COLUMN IF NOT EXISTS limit_type TEXT DEFAULT 'none';
@@ -192,6 +193,32 @@ async function initSchema() {
   await db.query(`
     ALTER TABLE products ADD COLUMN IF NOT EXISTS total_views INTEGER DEFAULT 0;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS unique_views INTEGER DEFAULT 0;
+  `)
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id TEXT PRIMARY KEY,
+      customer_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      address TEXT,
+      note TEXT,
+      subtotal NUMERIC(10,2) NOT NULL DEFAULT 0,
+      discount_code TEXT,
+      discount_amount NUMERIC(10,2) DEFAULT 0,
+      total NUMERIC(10,2) NOT NULL DEFAULT 0,
+      status TEXT DEFAULT 'pending',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS order_items (
+      id TEXT PRIMARY KEY,
+      order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+      product_id TEXT REFERENCES products(id) ON DELETE SET NULL,
+      product_name TEXT NOT NULL,
+      price NUMERIC(10,2) NOT NULL,
+      qty INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
   `)
 
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)

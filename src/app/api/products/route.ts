@@ -19,6 +19,7 @@ export async function GET() {
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        WHERE COALESCE(p.status, 'active') = 'active'
+         AND COALESCE(c.is_active, true) = true
        ORDER BY p.created_at DESC`
     )
 

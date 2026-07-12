@@ -22,10 +22,16 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const result = await query<{ id: string; name: string; slug: string }>(
-      'SELECT id, name, slug FROM categories ORDER BY name'
+    const result = await query<{ id: string; name: string; slug: string; is_active: boolean }>(
+      'SELECT id, name, slug, COALESCE(is_active, true) AS is_active FROM categories ORDER BY name'
     )
-    return NextResponse.json({ categories: result.rows })
+    const categories = result.rows.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      isActive: c.is_active,
+    }))
+    return NextResponse.json({ categories })
   } catch (err) {
     console.error('Admin categories error:', err)
     return NextResponse.json({ categories: [] })
@@ -38,13 +44,19 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, slug } = body
+    const { name, slug, isActive } = body
     if (!name) return NextResponse.json({ error: 'Ad mütləqdir' }, { status: 400 })
 
     const id = randomUUID()
     const categorySlug = slug || slugify(name)
+    const active = typeof isActive === 'boolean' ? isActive : true
 
-    await query('INSERT INTO categories (id, name, slug) VALUES ($1, $2, $3)', [id, name, categorySlug])
+    await query('INSERT INTO categories (id, name, slug, is_active) VALUES ($1, $2, $3, $4)', [
+      id,
+      name,
+      categorySlug,
+      active,
+    ])
     return NextResponse.json({ id, slug: categorySlug }, { status: 201 })
   } catch (err) {
     console.error('Admin categories POST error:', err)

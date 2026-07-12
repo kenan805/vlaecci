@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { ProductImage } from './ProductImage'
 import Link from 'next/link'
-import { ArrowLeft, Star, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Star, ChevronDown, ChevronUp, ShoppingBag, Check, Minus, Plus } from 'lucide-react'
 import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
+import { useCart } from '@/lib/cart'
 import type { ProductDetail as ProductDetailType } from '@/lib/products'
 
 interface ProductDetailProps {
@@ -33,6 +34,24 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0)
   const images = product.images?.length ? product.images : ['']
   const [reviewFilter, setReviewFilter] = useState<string>('all')
+  const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
+  const { add } = useCart()
+
+  const handleAddToCart = () => {
+    add(
+      {
+        productId: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images?.[0] ?? null,
+      },
+      qty
+    )
+    setAdded(true)
+    window.setTimeout(() => setAdded(false), 1800)
+  }
 
   useEffect(() => {
     if (!product.slug) return
@@ -98,6 +117,47 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </h1>
           <p className="text-4xl font-medium text-brown-300 mb-6">{product.price} ₼</p>
           <p className="text-brown-100/90 leading-relaxed mb-8">{product.description}</p>
+
+          <div className="flex items-stretch gap-3 mb-6">
+            <div className="inline-flex items-center rounded-full border border-sand-200 bg-cream-50 px-1">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                disabled={qty <= 1}
+                aria-label="Azalt"
+                className="w-10 h-10 flex items-center justify-center text-brown-100 hover:text-brown-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="w-8 text-center font-medium text-brown-300 tabular-nums">{qty}</span>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                aria-label="Artır"
+                className="w-10 h-10 flex items-center justify-center text-brown-100 hover:text-brown-300 transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-medium transition-colors ${
+                added ? 'bg-accent-sage text-cream-50' : 'bg-brown-300 text-cream-50 hover:bg-brown-400'
+              }`}
+            >
+              {added ? (
+                <>
+                  <Check size={18} /> Səbətə əlavə edildi ✓
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={18} /> Səbətə əlavə et
+                </>
+              )}
+            </button>
+          </div>
 
           <div className="mb-6">
             <p className="text-sm text-brown-100 mb-2">Endirim kodunuz var?</p>

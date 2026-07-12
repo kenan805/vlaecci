@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 
@@ -37,9 +38,17 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream-100 px-4">
       <div className="w-full max-w-md">
-        <h1 className="font-serif text-3xl font-medium text-brown-300 text-center mb-8">
-          VLAECCI Admin
-        </h1>
+        <div className="flex flex-col items-center mb-8">
+          <Image
+            src="/logo-full.png"
+            alt="VLAECCI"
+            width={160}
+            height={190}
+            priority
+            className="w-36 h-auto object-contain"
+          />
+          <p className="mt-3 text-xs tracking-[0.3em] uppercase text-brown-100/60">Admin Panel</p>
+        </div>
         <form
           onSubmit={handleSubmit}
           autoComplete="on"

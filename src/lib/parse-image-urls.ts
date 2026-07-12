@@ -3,7 +3,8 @@ export function isValidImageUrl(url: string) {
     url.startsWith('http://') ||
     url.startsWith('https://') ||
     url.startsWith('/api/media/') ||
-    url.startsWith('/uploads/')
+    url.startsWith('/uploads/') ||
+    url.startsWith('/products/')
   )
 }
 
