@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,31 +10,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // VLAECCI brand palette - soft beauty tones
+        // VLAECCI brand palette — CSS-variable backed so the whole admin can theme (light/dark)
+        white: 'rgb(var(--c-white) / <alpha-value>)',
         cream: {
-          50: '#FDFCFA',
-          100: '#FAF8F4',
-          200: '#F5F1E9',
-          300: '#EDE6DA',
-          400: '#E0D5C4',
+          50: 'rgb(var(--c-cream-50) / <alpha-value>)',
+          100: 'rgb(var(--c-cream-100) / <alpha-value>)',
+          200: 'rgb(var(--c-cream-200) / <alpha-value>)',
+          300: 'rgb(var(--c-cream-300) / <alpha-value>)',
+          400: 'rgb(var(--c-cream-400) / <alpha-value>)',
         },
         sand: {
-          50: '#F7F4EF',
-          100: '#EDE8E0',
-          200: '#DED5C8',
-          300: '#C4B8A8',
-          400: '#A89885',
+          50: 'rgb(var(--c-sand-50) / <alpha-value>)',
+          100: 'rgb(var(--c-sand-100) / <alpha-value>)',
+          200: 'rgb(var(--c-sand-200) / <alpha-value>)',
+          300: 'rgb(var(--c-sand-300) / <alpha-value>)',
+          400: 'rgb(var(--c-sand-400) / <alpha-value>)',
         },
         brown: {
-          50: '#8B7355',
-          100: '#6B5344',
-          200: '#5A4A3D',
-          300: '#4A3D32',
-          400: '#3D3329',
+          50: 'rgb(var(--c-brown-50) / <alpha-value>)',
+          100: 'rgb(var(--c-brown-100) / <alpha-value>)',
+          200: 'rgb(var(--c-brown-200) / <alpha-value>)',
+          300: 'rgb(var(--c-brown-300) / <alpha-value>)',
+          400: 'rgb(var(--c-brown-400) / <alpha-value>)',
         },
         accent: {
-          rose: '#C9A88E',
-          sage: '#9CAF88',
+          rose: 'rgb(var(--c-accent-rose) / <alpha-value>)',
+          sage: 'rgb(var(--c-accent-sage) / <alpha-value>)',
         },
       },
       fontFamily: {

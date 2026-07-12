@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFCFA"/><stop offset="1" stop-color="#EDE8E0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#4A3D32" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#bg)"/>
+  <circle cx="300" cy="360" r="230" fill="#D6A25A" opacity="0.10"/>
+  <circle cx="300" cy="360" r="170" fill="#D6A25A" opacity="0.08"/>
+  <!-- soft floor shadow -->
+  <ellipse cx="300" cy="628" rx="150" ry="20" fill="#4A3D32" opacity="0.08"/>
+  
+    <!-- dropper bottle -->
+    <rect x="240" y="300" width="120" height="320" rx="26" fill="#D6A25A" opacity="0.9"/>
+    <rect x="240" y="300" width="120" height="320" rx="26" fill="url(#glass)"/>
+    <rect x="266" y="250" width="68" height="60" rx="8" fill="#4A3D32"/>
+    <rect x="276" y="180" width="48" height="80" rx="10" fill="#6B5344"/>
+    <rect x="292" y="150" width="16" height="40" rx="8" fill="#C4B8A8"/>
+    <circle cx="300" cy="205" r="10" fill="#DED5C8"/>
+    <rect x="248" y="470" width="104" height="86" rx="10" fill="#ffffff" opacity="0.75"/><rect x="266" y="500" width="68" height="6" rx="3" fill="#ffffff"/><rect x="266" y="516" width="52" height="5" rx="2.5" fill="#4A3D32" opacity="0.4"/><rect x="266" y="528" width="60" height="5" rx="2.5" fill="#4A3D32" opacity="0.25"/>
+    
+  <!-- brand mark -->
+  <text x="300" y="712" text-anchor="middle" font-family="Georgia, serif" font-size="30" letter-spacing="6" fill="#4A3D32" opacity="0.85">VLAECCI</text>
+  <text x="300" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" letter-spacing="4" fill="#6B5344" opacity="0.6">SAÇ YAĞI</text>
+</svg>

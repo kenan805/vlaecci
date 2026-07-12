@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFCFA"/><stop offset="1" stop-color="#EDE8E0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#4A3D32" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#bg)"/>
+  <circle cx="300" cy="360" r="230" fill="#C9A88E" opacity="0.10"/>
+  <circle cx="300" cy="360" r="170" fill="#C9A88E" opacity="0.08"/>
+  <!-- soft floor shadow -->
+  <ellipse cx="300" cy="628" rx="150" ry="20" fill="#4A3D32" opacity="0.08"/>
+  
+    <path d="M250 320 h100 l-14 300 h-72 z" fill="#C9A88E" opacity="0.9"/>
+    <path d="M250 320 h100 l-14 300 h-72 z" fill="url(#glass)"/>
+    <rect x="262" y="286" width="76" height="40" rx="8" fill="#4A3D32"/>
+    <rect x="286" y="266" width="28" height="26" rx="6" fill="#6B5344"/>
+    <rect x="272" y="430" width="56" height="6" rx="3" fill="#ffffff" opacity="0.7"/>
+    <rect x="278" y="446" width="44" height="5" rx="2.5" fill="#ffffff" opacity="0.5"/>
+    
+  <!-- brand mark -->
+  <text x="300" y="712" text-anchor="middle" font-family="Georgia, serif" font-size="30" letter-spacing="6" fill="#4A3D32" opacity="0.85">VLAECCI</text>
+  <text x="300" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" letter-spacing="4" fill="#6B5344" opacity="0.6">KONDİSİONER</text>
+</svg>

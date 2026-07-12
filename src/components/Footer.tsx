@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Instagram } from 'lucide-react'
 
 const instagramHandle = process.env.NEXT_PUBLIC_INSTAGRAM_USERNAME || 'vlaecci'
@@ -17,7 +18,22 @@ export function Footer() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid md:grid-cols-4 gap-12">
           <div className="md:col-span-2">
-            <div className="font-serif text-2xl font-medium text-cream-50 mb-4">VLAECCI</div>
+            <div className="flex items-center gap-3 mb-4">
+              <Image
+                src="/logo-mark-light.png"
+                alt=""
+                width={44}
+                height={44}
+                className="w-11 h-11 object-contain"
+              />
+              <Image
+                src="/wordmark-light.png"
+                alt="VLAECCI"
+                width={747}
+                height={137}
+                className="h-5 w-auto object-contain"
+              />
+            </div>
             <p className="text-cream-200/80 text-sm max-w-md">
               Dermatoloq təsdiqli saç baxım məhsulları. Saç dökülməsi, zəif saç və yavaş böyümə problemlərinə təbii həll.
             </p>

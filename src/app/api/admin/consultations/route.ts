@@ -12,15 +12,17 @@ export async function GET(req: NextRequest) {
       name: string
       phone: string
       hair_issue: string
+      notes: string | null
       status: string
       created_at: string
-    }>('SELECT id, name, phone, hair_issue, status, created_at FROM consultations ORDER BY created_at DESC')
+    }>('SELECT id, name, phone, hair_issue, notes, status, created_at FROM consultations ORDER BY created_at DESC')
 
     const requests = result.rows.map((r) => ({
       id: r.id,
       name: r.name,
       phone: r.phone,
       hairIssue: r.hair_issue,
+      notes: r.notes,
       status: r.status,
       createdAt: r.created_at,
     }))

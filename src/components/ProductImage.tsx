@@ -11,7 +11,7 @@ interface ProductImageProps {
 
 export function ProductImage({ src, alt, fill, className, sizes, priority }: ProductImageProps) {
   const isDataUrl = src.startsWith('data:')
-  const isProxied = src.startsWith('/api/media/') || src.startsWith('/uploads/')
+  const isProxied = src.startsWith('/api/media/') || src.startsWith('/uploads/') || src.startsWith('/products/')
 
   if (isDataUrl || isProxied) {
     return (

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Playfair_Display, DM_Sans } from 'next/font/google'
 import './globals.css'
 import { NavigationLoader } from '@/components/NavigationLoader'
+import { CartProvider } from '@/lib/cart'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -27,7 +28,7 @@ export default function RootLayout({
     <html lang="az" className={`scroll-smooth ${playfair.variable} ${dmSans.variable}`}>
       <body className="antialiased min-h-screen bg-cream-50 text-brown-100 font-sans">
         <NavigationLoader />
-        {children}
+        <CartProvider>{children}</CartProvider>
       </body>
     </html>
   )
