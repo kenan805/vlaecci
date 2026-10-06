@@ -3,7 +3,6 @@ import { Hero } from '@/components/Hero'
 import { BeforeAfter } from '@/components/BeforeAfter'
 import { Benefits } from '@/components/Benefits'
 import { Testimonials } from '@/components/Testimonials'
-import { InstagramSection } from '@/components/InstagramSection'
 import { CTASection } from '@/components/CTASection'
 import { Footer } from '@/components/Footer'
 import { listResults, listTestimonials } from '@/lib/home-content'
@@ -30,7 +29,6 @@ export default async function HomePage() {
         <BeforeAfter items={results} />
         <Benefits />
         <Testimonials items={testimonials} />
-        <InstagramSection />
         <CTASection />
       </main>
       <Footer />

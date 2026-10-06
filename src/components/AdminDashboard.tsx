@@ -20,6 +20,7 @@ import {
   MessageSquare,
   ShoppingBag,
   Images,
+  Inbox,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { CategoryManager } from './admin/CategoryManager'
@@ -31,6 +32,7 @@ import { ProfileSettings } from './admin/ProfileSettings'
 import { AnalysisLeadsAdmin } from './admin/AnalysisLeadsAdmin'
 import { OrdersAdmin } from './admin/OrdersAdmin'
 import { ResultsAdmin } from './admin/ResultsAdmin'
+import { MessagesAdmin } from './admin/MessagesAdmin'
 import { TestimonialsAdmin } from './admin/TestimonialsAdmin'
 import { ThemeToggle } from './admin/ThemeToggle'
 import { ToastProvider } from './admin/Toast'
@@ -44,6 +46,7 @@ type Tab =
   | 'leads'
   | 'results'
   | 'testimonials'
+  | 'messages'
   | 'discounts'
   | 'profile'
 
@@ -180,6 +183,7 @@ function AdminDashboardInner() {
     { id: 'leads' as Tab, label: 'Analiz nəticələri', icon: ClipboardList },
     { id: 'results' as Tab, label: 'Əvvəl / Sonra', icon: Images },
     { id: 'testimonials' as Tab, label: 'Müştəri rəyləri', icon: MessageSquare },
+    { id: 'messages' as Tab, label: 'Mesajlar', icon: Inbox },
     { id: 'discounts' as Tab, label: 'Endirim kodları', icon: Tag },
   ]
 
@@ -331,6 +335,7 @@ function AdminDashboardInner() {
           {tab === 'leads' && <AnalysisLeadsAdmin />}
           {tab === 'results' && <ResultsAdmin />}
           {tab === 'testimonials' && <TestimonialsAdmin />}
+          {tab === 'messages' && <MessagesAdmin />}
           {tab === 'discounts' && <DiscountManager discounts={discounts} onSave={fetchData} />}
           {tab === 'profile' && <ProfileSettings onUpdated={fetchData} />}
         </main>
