@@ -10,8 +10,6 @@ interface StatsTotals {
   totalViews: number
   uniqueViews: number
   reviews: number
-  consultations: number
-  pendingConsultations: number
   quizResponses: number
   analysisSessions: number
   contactMessages: number
@@ -40,19 +38,12 @@ interface CountrySlice {
   count: number
 }
 
-interface RecentConsultation {
-  name: string
-  status: string
-  createdAt: string
-}
-
 interface StatsResponse {
   totals: StatsTotals
   statusDistribution: StatusSlice[]
   topProducts: TopProduct[]
   viewsByDay: DayPoint[]
   topCountries: CountrySlice[]
-  recentConsultations: RecentConsultation[]
 }
 
 const EMPTY_STATS: StatsResponse = {
@@ -62,8 +53,6 @@ const EMPTY_STATS: StatsResponse = {
     totalViews: 0,
     uniqueViews: 0,
     reviews: 0,
-    consultations: 0,
-    pendingConsultations: 0,
     quizResponses: 0,
     analysisSessions: 0,
     contactMessages: 0,
@@ -78,7 +67,6 @@ const EMPTY_STATS: StatsResponse = {
   topProducts: [],
   viewsByDay: [],
   topCountries: [],
-  recentConsultations: [],
 }
 
 /** Build the last 14 calendar days (UTC) as 'YYYY-MM-DD' keys, oldest first. */
@@ -102,7 +90,6 @@ export async function GET(req: NextRequest) {
       productsAgg,
       statusAgg,
       reviewsAgg,
-      consultationsAgg,
       quizAgg,
       analysisAgg,
       contactAgg,
@@ -110,7 +97,6 @@ export async function GET(req: NextRequest) {
       topProductsRows,
       viewsRows,
       countriesRows,
-      recentRows,
     ] = await Promise.all([
       query<{
         products: number
@@ -131,11 +117,6 @@ export async function GET(req: NextRequest) {
          GROUP BY COALESCE(status, 'active')`
       ),
       query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM product_reviews`),
-      query<{ total: number; pending: number }>(
-        `SELECT COUNT(*)::int AS total,
-                COUNT(*) FILTER (WHERE COALESCE(status, 'pending') = 'pending')::int AS pending
-         FROM consultations`
-      ),
       query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM quiz_responses`),
       query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM analysis_sessions`),
       query<{ count: number }>(`SELECT COUNT(*)::int AS count FROM contact_messages`),
@@ -167,16 +148,9 @@ export async function GET(req: NextRequest) {
          ORDER BY count DESC
          LIMIT 5`
       ),
-      query<{ name: string; status: string; created_at: string }>(
-        `SELECT name, COALESCE(status, 'pending') AS status, created_at
-         FROM consultations
-         ORDER BY created_at DESC
-         LIMIT 5`
-      ),
     ])
 
     const p = productsAgg.rows[0]
-    const c = consultationsAgg.rows[0]
     const d = discountAgg.rows[0]
 
     const totals: StatsTotals = {
@@ -185,8 +159,6 @@ export async function GET(req: NextRequest) {
       totalViews: Number(p?.total_views ?? 0),
       uniqueViews: Number(p?.unique_views ?? 0),
       reviews: Number(reviewsAgg.rows[0]?.count ?? 0),
-      consultations: Number(c?.total ?? 0),
-      pendingConsultations: Number(c?.pending ?? 0),
       quizResponses: Number(quizAgg.rows[0]?.count ?? 0),
       analysisSessions: Number(analysisAgg.rows[0]?.count ?? 0),
       contactMessages: Number(contactAgg.rows[0]?.count ?? 0),
@@ -218,19 +190,12 @@ export async function GET(req: NextRequest) {
       count: Number(row.count),
     }))
 
-    const recentConsultations: RecentConsultation[] = recentRows.rows.map((row) => ({
-      name: row.name,
-      status: row.status,
-      createdAt: row.created_at,
-    }))
-
     const payload: StatsResponse = {
       totals,
       statusDistribution,
       topProducts,
       viewsByDay,
       topCountries,
-      recentConsultations,
     }
 
     return NextResponse.json(payload)

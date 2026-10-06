@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
+import { formatAzPhone, isValidAzPhone } from '@/lib/phone'
 
 interface IncomingItem {
   productId: string
@@ -15,7 +16,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const name = typeof body?.customer?.name === 'string' ? body.customer.name.trim() : ''
-    const phone = typeof body?.customer?.phone === 'string' ? body.customer.phone.trim() : ''
+    const rawPhone = typeof body?.customer?.phone === 'string' ? body.customer.phone.trim() : ''
+    const phone = rawPhone ? formatAzPhone(rawPhone) : ''
     const address = typeof body?.customer?.address === 'string' ? body.customer.address.trim() : ''
     const note = typeof body?.customer?.note === 'string' ? body.customer.note.trim() : ''
     const code = typeof body?.code === 'string' ? body.code.trim() : ''
@@ -23,6 +25,9 @@ export async function POST(req: NextRequest) {
 
     if (!name || !phone) {
       return NextResponse.json({ error: 'Ad və telefon mütləqdir' }, { status: 400 })
+    }
+    if (!isValidAzPhone(phone)) {
+      return NextResponse.json({ error: 'Telefon nömrəsi düzgün deyil' }, { status: 400 })
     }
 
     // Aggregate requested quantities per product

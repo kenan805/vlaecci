@@ -7,7 +7,6 @@ import {
   Users,
   MessageSquare,
   Tag,
-  ClipboardList,
   Sparkles,
   BarChart3,
   Globe,
@@ -29,8 +28,6 @@ interface StatsTotals {
   totalViews: number
   uniqueViews: number
   reviews: number
-  consultations: number
-  pendingConsultations: number
   quizResponses: number
   analysisSessions: number
   contactMessages: number
@@ -59,19 +56,12 @@ interface CountrySlice {
   count: number
 }
 
-interface RecentConsultation {
-  name: string
-  status: string
-  createdAt: string
-}
-
 interface StatsResponse {
   totals: StatsTotals
   statusDistribution: StatusSlice[]
   topProducts: TopProduct[]
   viewsByDay: DayPoint[]
   topCountries: CountrySlice[]
-  recentConsultations: RecentConsultation[]
 }
 
 /* ------------------------------------------------------------------ */
@@ -99,26 +89,12 @@ const STATUS_COLORS: Record<ProductStatus, string> = {
   deactive: 'rgba(107, 83, 68, 0.4)', // brown-100 / 40
 }
 
-const CONSULT_STATUS_LABELS: Record<string, string> = {
-  pending: 'Gözləyir',
-  contacted: 'Əlaqə saxlanıldı',
-  completed: 'Tamamlandı',
-  cancelled: 'Ləğv edildi',
-}
-
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
 function nfmt(value: number): string {
   return new Intl.NumberFormat('az-AZ').format(value)
-}
-
-function formatDate(value?: string): string {
-  if (!value) return '—'
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('az-AZ', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function shortDay(value: string): string {
@@ -454,45 +430,6 @@ function TopCountries({ data }: { data: CountrySlice[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Recent consultations                                               */
-/* ------------------------------------------------------------------ */
-
-function RecentConsultations({ data }: { data: RecentConsultation[] }) {
-  const rows = data.length > 0 ? data : []
-
-  return (
-    <Card className="p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-8 h-8 rounded-lg bg-brown-300/10 text-brown-300 flex items-center justify-center">
-          <ClipboardList size={16} />
-        </span>
-        <h3 className="text-sm font-semibold text-brown-300">Son konsultasiyalar</h3>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="py-6">
-          <EmptyState icon={<ClipboardList size={22} />} title="Konsultasiya yoxdur" />
-        </div>
-      ) : (
-        <ul className="divide-y divide-sand-200/60">
-          {rows.map((r, i) => (
-            <li key={`${r.name}-${i}`} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-              <div className="min-w-0">
-                <p className="text-sm text-brown-300 truncate">{r.name || '—'}</p>
-                <p className="text-xs text-brown-100/50">{formatDate(r.createdAt)}</p>
-              </div>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200 shrink-0">
-                {CONSULT_STATUS_LABELS[r.status] ?? r.status}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
-  )
-}
-
-/* ------------------------------------------------------------------ */
 /* Main dashboard                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -552,7 +489,6 @@ export function StatsDashboard() {
   const topProducts = data.topProducts ?? []
   const viewsByDay = data.viewsByDay ?? []
   const topCountries = data.topCountries ?? []
-  const recentConsultations = data.recentConsultations ?? []
 
   const statCards: { label: string; value: number; icon: React.ReactNode; tint: Tint; hint?: string }[] = [
     {
@@ -565,13 +501,6 @@ export function StatsDashboard() {
     { label: 'Ümumi baxış', value: totals.totalViews, icon: <Eye size={18} />, tint: 'sage' },
     { label: 'Unikal baxış', value: totals.uniqueViews, icon: <Users size={18} />, tint: 'rose' },
     { label: 'Rəylər', value: totals.reviews, icon: <MessageSquare size={18} />, tint: 'sand' },
-    {
-      label: 'Konsultasiyalar',
-      value: totals.consultations,
-      icon: <ClipboardList size={18} />,
-      tint: 'brown',
-      hint: `${nfmt(totals.pendingConsultations)} gözləyir`,
-    },
     { label: 'Endirim istifadəsi', value: totals.discountUsage, icon: <Tag size={18} />, tint: 'sage' },
     { label: 'Quiz cavabları', value: totals.quizResponses, icon: <Sparkles size={18} />, tint: 'rose' },
     { label: 'Analiz sessiyaları', value: totals.analysisSessions, icon: <Sparkles size={18} />, tint: 'sand' },
@@ -606,11 +535,6 @@ export function StatsDashboard() {
         <div>
           <TopCountries data={topCountries} />
         </div>
-      </div>
-
-      {/* Row C: recent consultations */}
-      <div className="mt-4">
-        <RecentConsultations data={recentConsultations} />
       </div>
     </div>
   )

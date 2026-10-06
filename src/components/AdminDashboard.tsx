@@ -19,6 +19,7 @@ import {
   ClipboardList,
   MessageSquare,
   ShoppingBag,
+  Images,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { CategoryManager } from './admin/CategoryManager'
@@ -28,8 +29,9 @@ import { DiscountManager } from './admin/DiscountManager'
 import { StatsDashboard } from './admin/StatsDashboard'
 import { ProfileSettings } from './admin/ProfileSettings'
 import { AnalysisLeadsAdmin } from './admin/AnalysisLeadsAdmin'
-import { ConsultationsAdmin } from './admin/ConsultationsAdmin'
 import { OrdersAdmin } from './admin/OrdersAdmin'
+import { ResultsAdmin } from './admin/ResultsAdmin'
+import { TestimonialsAdmin } from './admin/TestimonialsAdmin'
 import { ThemeToggle } from './admin/ThemeToggle'
 import { ToastProvider } from './admin/Toast'
 
@@ -40,7 +42,8 @@ type Tab =
   | 'categories'
   | 'analysis'
   | 'leads'
-  | 'consultations'
+  | 'results'
+  | 'testimonials'
   | 'discounts'
   | 'profile'
 
@@ -175,7 +178,8 @@ function AdminDashboardInner() {
     { id: 'categories' as Tab, label: 'Kateqoriyalar', icon: FolderOpen },
     { id: 'analysis' as Tab, label: 'Saç Analizi', icon: Sparkles },
     { id: 'leads' as Tab, label: 'Analiz nəticələri', icon: ClipboardList },
-    { id: 'consultations' as Tab, label: 'Konsultasiyalar', icon: MessageSquare },
+    { id: 'results' as Tab, label: 'Əvvəl / Sonra', icon: Images },
+    { id: 'testimonials' as Tab, label: 'Müştəri rəyləri', icon: MessageSquare },
     { id: 'discounts' as Tab, label: 'Endirim kodları', icon: Tag },
   ]
 
@@ -325,7 +329,8 @@ function AdminDashboardInner() {
           {tab === 'categories' && <CategoryManager onUpdate={fetchData} />}
           {tab === 'analysis' && <AnalysisAdmin products={products.map((p) => ({ id: p.id, name: p.name }))} />}
           {tab === 'leads' && <AnalysisLeadsAdmin />}
-          {tab === 'consultations' && <ConsultationsAdmin />}
+          {tab === 'results' && <ResultsAdmin />}
+          {tab === 'testimonials' && <TestimonialsAdmin />}
           {tab === 'discounts' && <DiscountManager discounts={discounts} onSave={fetchData} />}
           {tab === 'profile' && <ProfileSettings onUpdated={fetchData} />}
         </main>
