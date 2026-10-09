@@ -2,29 +2,11 @@
 
 import { motion } from 'framer-motion'
 import { Star, Quote } from 'lucide-react'
+import type { Testimonial } from '@/lib/home-content'
 
-const testimonials = [
-  {
-    name: 'Leyla M.',
-    handle: '@leyla.m',
-    text: '3 aydan sonra saçlarım əslində daha güclü hiss olunur. Serum həqiqətən işləyir!',
-    rating: 5,
-  },
-  {
-    name: 'Aysel K.',
-    handle: '@aysel.k',
-    text: 'Saç dökülməsim azaldı və saçlarım daha parlaq görünür. Məsləhət edirəm.',
-    rating: 5,
-  },
-  {
-    name: 'Nigar R.',
-    handle: '@nigar.r',
-    text: 'Təbii məhsul axtarırdım - VLAECCI məndəki ən yaxşı seçim oldu.',
-    rating: 5,
-  },
-]
+export function Testimonials({ items }: { items: Testimonial[] }) {
+  if (items.length === 0) return null
 
-export function Testimonials() {
   return (
     <section className="py-20 md:py-28 bg-cream-100/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -43,9 +25,9 @@ export function Testimonials() {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((item, i) => (
+          {items.map((item, i) => (
             <motion.div
-              key={item.handle}
+              key={item.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -65,7 +47,7 @@ export function Testimonials() {
                 </div>
                 <div>
                   <div className="font-medium text-brown-300 text-sm">{item.name}</div>
-                  <div className="text-xs text-brown-100/70">{item.handle}</div>
+                  {item.handle && <div className="text-xs text-brown-100/70">{item.handle}</div>}
                 </div>
               </div>
             </motion.div>

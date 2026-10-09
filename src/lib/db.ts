@@ -221,6 +221,30 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
   `)
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS before_after_results (
+      id TEXT PRIMARY KEY,
+      before_image TEXT NOT NULL,
+      after_image TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      handle TEXT,
+      text TEXT NOT NULL,
+      rating INTEGER DEFAULT 5,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 

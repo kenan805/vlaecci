@@ -1,6 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import type { BeforeAfterResult } from '@/lib/home-content'
+import { BeforeAfterSlider } from './BeforeAfterSlider'
 
 const results = [
   {
@@ -20,7 +22,7 @@ const results = [
   },
 ]
 
-export function BeforeAfter() {
+export function BeforeAfter({ items }: { items: BeforeAfterResult[] }) {
   return (
     <section className="py-20 md:py-28 bg-cream-100/50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -58,20 +60,16 @@ export function BeforeAfter() {
           ))}
         </div>
 
-        {/* Visual before/after placeholder - real images would go here */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-16 grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto"
-        >
-          <div className="aspect-[4/3] rounded-2xl bg-sand-200/50 flex items-center justify-center border border-sand-300/30">
-            <span className="text-sand-400 text-sm">ƏVVƏL - Foto nümunə</span>
-          </div>
-          <div className="aspect-[4/3] rounded-2xl bg-sand-200/50 flex items-center justify-center border border-sand-300/30">
-            <span className="text-sand-400 text-sm">SONRA - Foto nümunə</span>
-          </div>
-        </motion.div>
+        {items.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="mt-16"
+          >
+            <BeforeAfterSlider results={items} />
+          </motion.div>
+        )}
       </div>
     </section>
   )
