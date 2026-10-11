@@ -6,6 +6,8 @@ import { ShoppingBag, Check } from 'lucide-react'
 import { ProductImage } from './ProductImage'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
+import { formatMoney, variantDisplayName, variantImages, type ProductVariant } from '@/lib/variants'
+import { VariantSelector } from './VariantSelector'
 
 interface Product {
   id: string
@@ -14,6 +16,8 @@ interface Product {
   description: string
   price: number
   images: string[]
+  variants: ProductVariant[]
+  variantImages: boolean
   category: { name: string }
 }
 
@@ -22,7 +26,11 @@ export function ProductGrid() {
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState<string>('all')
   const [addedId, setAddedId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Record<string, string>>({})
   const { add } = useCart()
+
+  const selectedVariant = (p: Product): ProductVariant | null =>
+    p.variants?.find((v) => v.id === selected[p.id]) ?? p.variants?.[0] ?? null
 
   useEffect(() => {
     apiFetch('/products')
@@ -79,16 +87,21 @@ export function ProductGrid() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filtered.map((product) => (
+        {filtered.map((product) => {
+          const variant = selectedVariant(product)
+          const images = variantImages(product.images || [], variant, product.variantImages)
+          const price = variant ? variant.price : product.price
+          return (
           <Link
             key={product.id}
             href={`/mehsullar/${product.slug}`}
             className="group block bg-cream-50 rounded-xl overflow-hidden border border-sand-200/50 hover:shadow-md hover:border-sand-300 transition-all"
           >
             <div className="aspect-square relative bg-sand-200/30">
-              {product.images?.[0] ? (
+              {images[0] ? (
                 <ProductImage
-                  src={product.images[0]}
+                  key={images[0]}
+                  src={images[0]}
                   alt={product.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -107,8 +120,19 @@ export function ProductGrid() {
               <h3 className="text-sm font-medium text-brown-300 group-hover:text-accent-rose transition-colors line-clamp-2 leading-snug">
                 {product.name}
               </h3>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="text-brown-300 text-sm font-semibold">{product.price} ₼</p>
+              {product.variants?.length > 0 && (
+                <div className="mt-2">
+                  <VariantSelector
+                    compact
+                    variants={product.variants}
+                    value={variant?.id ?? null}
+                    onChange={(id) => setSelected((cur) => ({ ...cur, [product.id]: id }))}
+                  />
+                  {variant?.label && <p className="mt-1 text-[11px] text-accent-rose">{variant.label}</p>}
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-brown-300 text-sm font-semibold">{formatMoney(price)} ₼</p>
                 <button
                   type="button"
                   aria-label="Səbətə əlavə et"
@@ -117,10 +141,12 @@ export function ProductGrid() {
                     e.stopPropagation()
                     add({
                       productId: product.id,
+                      variantId: variant?.id ?? null,
+                      variantLabel: variant ? variantDisplayName(variant) : null,
                       name: product.name,
                       slug: product.slug,
-                      price: product.price,
-                      image: product.images?.[0] ?? null,
+                      price,
+                      image: images[0] ?? null,
                     })
                     setAddedId(product.id)
                     window.setTimeout(
@@ -140,7 +166,8 @@ export function ProductGrid() {
               </div>
             </div>
           </Link>
-        ))}
+          )
+        })}
       </div>
     </>
   )

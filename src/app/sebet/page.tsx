@@ -7,7 +7,7 @@ import { ShoppingBag, Trash2, Minus, Plus, Loader2, Tag, X, Check, ArrowRight } 
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { ProductImage } from '@/components/ProductImage'
-import { useCart } from '@/lib/cart'
+import { cartKey, useCart } from '@/lib/cart'
 import { apiFetch } from '@/lib/api'
 import { formatAzPhone, isValidAzPhone, PHONE_PLACEHOLDER } from '@/lib/phone'
 
@@ -15,6 +15,7 @@ const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+99455708799
 
 interface OrderResponseItem {
   name: string
+  variantLabel?: string | null
   price: number
   qty: number
 }
@@ -131,7 +132,7 @@ export default function CartPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
+          items: items.map((i) => ({ productId: i.productId, variantId: i.variantId ?? null, qty: i.qty })),
           customer: {
             name: name.trim(),
             phone: phone.trim(),
@@ -147,7 +148,7 @@ export default function CartPage() {
       // Build the WhatsApp order summary
       const lines: string[] = [`Yeni sifariş #${data.orderId.slice(0, 8)}`, '']
       for (const it of data.items) {
-        lines.push(`• ${it.name} x ${it.qty} = ${money(it.price * it.qty)} ₼`)
+        lines.push(`• ${it.name}${it.variantLabel ? ` (${it.variantLabel})` : ''} x ${it.qty} = ${money(it.price * it.qty)} ₼`)
       }
       lines.push('')
       lines.push(`Ara cəm: ${money(data.subtotal)} ₼`)
@@ -250,7 +251,7 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
               <motion.div
-                key={item.productId}
+                key={cartKey(item)}
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -279,20 +280,25 @@ export default function CartPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => remove(item.productId)}
+                      onClick={() => remove(cartKey(item))}
                       aria-label="Səbətdən sil"
                       className="shrink-0 p-1.5 text-brown-100/60 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
+                  {item.variantLabel && (
+                    <span className="mt-1 inline-flex w-fit items-center rounded-full bg-sand-200/60 px-2.5 py-0.5 text-xs font-medium text-brown-200">
+                      {item.variantLabel}
+                    </span>
+                  )}
                   <p className="text-sm text-brown-100/80 mt-0.5">{money(item.price)} ₼</p>
 
                   <div className="mt-auto pt-3 flex items-center justify-between gap-2">
                     <div className="inline-flex items-center rounded-full border border-sand-200 bg-cream-50">
                       <button
                         type="button"
-                        onClick={() => setQty(item.productId, item.qty - 1)}
+                        onClick={() => setQty(cartKey(item), item.qty - 1)}
                         disabled={item.qty <= 1}
                         aria-label="Azalt"
                         className="w-9 h-9 flex items-center justify-center text-brown-100 hover:text-brown-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -304,7 +310,7 @@ export default function CartPage() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => setQty(item.productId, item.qty + 1)}
+                        onClick={() => setQty(cartKey(item), item.qty + 1)}
                         aria-label="Artır"
                         className="w-9 h-9 flex items-center justify-center text-brown-100 hover:text-brown-300 transition-colors"
                       >

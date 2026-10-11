@@ -8,6 +8,8 @@ import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import type { ProductDetail as ProductDetailType } from '@/lib/products'
+import { formatMoney, variantDisplayName, variantImages } from '@/lib/variants'
+import { VariantSelector } from './VariantSelector'
 
 interface ProductDetailProps {
   product: ProductDetailType
@@ -32,7 +34,16 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0)
-  const images = product.images?.length ? product.images : ['']
+  const [variantId, setVariantId] = useState<string | null>(product.variants?.[0]?.id ?? null)
+  const variant = product.variants?.find((v) => v.id === variantId) ?? null
+  const shownImages = variantImages(product.images || [], variant, product.variantImages)
+  const images = shownImages.length ? shownImages : ['']
+  const price = variant ? variant.price : product.price
+
+  const selectVariant = (id: string) => {
+    setVariantId(id)
+    setActiveImage(0)
+  }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
@@ -42,10 +53,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
     add(
       {
         productId: product.id,
+        variantId: variant?.id ?? null,
+        variantLabel: variant ? variantDisplayName(variant) : null,
         name: product.name,
         slug: product.slug,
-        price: product.price,
-        image: product.images?.[0] ?? null,
+        price,
+        image: shownImages[0] ?? null,
       },
       qty
     )
@@ -115,7 +128,16 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-4">
             {product.name}
           </h1>
-          <p className="text-4xl font-medium text-brown-300 mb-6">{product.price} ₼</p>
+          <p className="text-4xl font-medium text-brown-300 mb-6">{formatMoney(price)} ₼</p>
+          {product.variants?.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-brown-200 mb-2.5">
+                Həcm:{' '}
+                <span className="text-brown-300">{variant ? variantDisplayName(variant) : ''}</span>
+              </p>
+              <VariantSelector variants={product.variants} value={variant?.id ?? null} onChange={selectVariant} />
+            </div>
+          )}
           <p className="text-brown-100/90 leading-relaxed mb-8">{product.description}</p>
 
           <div className="flex items-stretch gap-3 mb-6">

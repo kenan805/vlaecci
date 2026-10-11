@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
 import { sanitizeImageUrls } from '@/lib/parse-image-urls'
+import { parseVariantsInput, saveVariants } from '@/lib/products'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req)
@@ -20,12 +21,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ success: true })
     }
 
-    const { name, slug, description, ingredients, howToUse, price, images, categoryId, status } = body
-    const rounded = Math.round(Number(price) * 100) / 100
+    const { name, slug, description, ingredients, howToUse, price, images, categoryId, status, variantImages } = body
+
+    // Variants are only touched when the request carries them, so other callers can't wipe them.
+    const updateVariants = Array.isArray(body.variants)
+    const parsed = parseVariantsInput(updateVariants ? body.variants : [])
+    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const { variants } = parsed
+
+    const rounded =
+      variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : Math.round(Number(price) * 100) / 100
+    if (Number.isNaN(rounded)) {
+      return NextResponse.json({ error: 'Qiymət düzgün deyil' }, { status: 400 })
+    }
 
     await query(
       `UPDATE products SET name = $1, slug = $2, description = $3, ingredients = $4, how_to_use = $5,
-       price = $6, images = $7, category_id = $8, status = COALESCE($9, status), updated_at = NOW()
+       price = $6, images = $7, category_id = $8, status = COALESCE($9, status),
+       variant_images = COALESCE($11, variant_images), updated_at = NOW()
        WHERE id = $10`,
       [
         name,
@@ -38,8 +51,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         categoryId,
         status || null,
         id,
+        typeof variantImages === 'boolean' ? variantImages : null,
       ]
     )
+    if (updateVariants) await saveVariants(id, variants)
 
     return NextResponse.json({ success: true })
   } catch (err) {

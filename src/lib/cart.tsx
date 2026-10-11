@@ -4,6 +4,10 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 
 export interface CartItem {
   productId: string
+  /** Selected size/volume variant, if the product has variants. */
+  variantId?: string | null
+  /** Human-readable variant, e.g. "30 ml" or "20 ml · Test versiya". */
+  variantLabel?: string | null
   name: string
   slug: string
   price: number
@@ -17,12 +21,17 @@ interface CartContextValue {
   subtotal: number
   ready: boolean
   add: (item: Omit<CartItem, 'qty'>, qty?: number) => void
-  remove: (productId: string) => void
-  setQty: (productId: string, qty: number) => void
+  remove: (key: string) => void
+  setQty: (key: string, qty: number) => void
   clear: () => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
+
+/** A cart line is one product in one variant — the same product in two sizes is two lines. */
+export function cartKey(item: Pick<CartItem, 'productId' | 'variantId'>): string {
+  return `${item.productId}::${item.variantId ?? ''}`
+}
 const STORAGE_KEY = 'vlaecci-cart'
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -53,23 +62,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const add = useCallback((item: Omit<CartItem, 'qty'>, qty: number = 1) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.productId === item.productId)
+      const key = cartKey(item)
+      const existing = prev.find((i) => cartKey(i) === key)
       if (existing) {
-        return prev.map((i) => (i.productId === item.productId ? { ...i, qty: i.qty + qty } : i))
+        return prev.map((i) => (cartKey(i) === key ? { ...i, qty: i.qty + qty } : i))
       }
       return [...prev, { ...item, qty }]
     })
   }, [])
 
-  const remove = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.productId !== productId))
+  const remove = useCallback((key: string) => {
+    setItems((prev) => prev.filter((i) => cartKey(i) !== key))
   }, [])
 
-  const setQty = useCallback((productId: string, qty: number) => {
+  const setQty = useCallback((key: string, qty: number) => {
     setItems((prev) =>
       qty <= 0
-        ? prev.filter((i) => i.productId !== productId)
-        : prev.map((i) => (i.productId === productId ? { ...i, qty } : i))
+        ? prev.filter((i) => cartKey(i) !== key)
+        : prev.map((i) => (cartKey(i) === key ? { ...i, qty } : i))
     )
   }, [])
 
