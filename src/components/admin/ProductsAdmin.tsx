@@ -57,6 +57,7 @@ export interface Product {
   totalViews?: number
   uniqueViews?: number
   reviewCount?: number
+  resultCount?: number
 }
 
 interface Review {
@@ -1706,6 +1707,11 @@ export function ProductsAdmin({
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-medium text-brown-300 text-sm">{p.name}</div>
+                        {(p.resultCount ?? 0) > 0 && (
+                          <span className="mt-1 inline-flex items-center rounded-full bg-accent-rose/15 px-2 py-0.5 text-[11px] font-medium text-accent-rose">
+                            Əvvəl / Sonra · {p.resultCount}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-brown-100">{p.category?.name || '—'}</td>
                       <td className="px-4 py-3 text-sm font-semibold text-brown-300 whitespace-nowrap tabular-nums">

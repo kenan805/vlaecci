@@ -333,7 +333,9 @@ function AdminDashboardInner() {
           {tab === 'categories' && <CategoryManager onUpdate={fetchData} />}
           {tab === 'analysis' && <AnalysisAdmin products={products.map((p) => ({ id: p.id, name: p.name }))} />}
           {tab === 'leads' && <AnalysisLeadsAdmin />}
-          {tab === 'results' && <ResultsAdmin />}
+          {tab === 'results' && (
+            <ResultsAdmin products={products.map((p) => ({ id: p.id, name: p.name }))} onUpdate={fetchData} />
+          )}
           {tab === 'testimonials' && <TestimonialsAdmin />}
           {tab === 'messages' && <MessagesAdmin />}
           {tab === 'discounts' && <DiscountManager discounts={discounts} onSave={fetchData} />}
