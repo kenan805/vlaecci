@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
 import { sanitizeImageUrls } from '@/lib/parse-image-urls'
+import { loadVariants, parseVariantsInput, saveVariants } from '@/lib/products'
 
 export type ProductStatus = 'draft' | 'active' | 'deactive'
 
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
       how_to_use: string | null
       price: string
       images: string[]
+      variant_images: boolean | null
       category_id: string
       category_name: string
       status: string
@@ -30,7 +32,7 @@ export async function GET(req: NextRequest) {
       review_count: string
     }>(
       `SELECT p.id, p.name, p.slug, p.description, p.ingredients, p.how_to_use,
-              p.price, p.images, p.category_id, c.name AS category_name,
+              p.price, p.images, p.variant_images, p.category_id, c.name AS category_name,
               COALESCE(p.status, 'active') AS status,
               p.created_at, p.updated_at,
               COALESCE(p.total_views, 0) AS total_views,
@@ -39,6 +41,11 @@ export async function GET(req: NextRequest) {
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY p.created_at DESC`
+    )
+
+    const variantsByProduct = await loadVariants(
+      result.rows.map((p) => p.id),
+      false
     )
 
     const products = result.rows.map((p) => ({
@@ -52,6 +59,8 @@ export async function GET(req: NextRequest) {
       images: sanitizeImageUrls(
         Array.isArray(p.images) ? p.images : JSON.parse((p.images as unknown as string) || '[]')
       ),
+      variantImages: p.variant_images ?? false,
+      variants: variantsByProduct.get(p.id) ?? [],
       categoryId: p.category_id,
       category: { name: p.category_name },
       status: (p.status || 'active') as ProductStatus,
@@ -75,13 +84,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { name, slug, description, ingredients, howToUse, price, images, categoryId, status } = body
+    const { name, slug, description, ingredients, howToUse, price, images, categoryId, status, variantImages } = body
 
-    if (!name || !description || price == null || !categoryId) {
+    const parsed = parseVariantsInput(body.variants)
+    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const { variants } = parsed
+
+    if (!name || !description || (price == null && variants.length === 0) || !categoryId) {
       return NextResponse.json({ error: 'Məcburi sahələr doldurulmalıdır' }, { status: 400 })
     }
 
-    const rounded = Math.round(Number(price) * 100) / 100
+    const rounded = variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : Math.round(Number(price) * 100) / 100
     if (Number.isNaN(rounded)) {
       return NextResponse.json({ error: 'Qiymət düzgün deyil' }, { status: 400 })
     }
@@ -92,8 +105,8 @@ export async function POST(req: NextRequest) {
       status === 'draft' || status === 'deactive' || status === 'active' ? status : 'active'
 
     await query(
-      `INSERT INTO products (id, name, slug, description, ingredients, how_to_use, price, images, category_id, status, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+      `INSERT INTO products (id, name, slug, description, ingredients, how_to_use, price, images, category_id, status, variant_images, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
       [
         id,
         name,
@@ -105,8 +118,10 @@ export async function POST(req: NextRequest) {
         JSON.stringify(sanitizeImageUrls(images)),
         categoryId,
         productStatus,
+        variantImages === true,
       ]
     )
+    await saveVariants(id, variants)
 
     return NextResponse.json({ id, slug: productSlug }, { status: 201 })
   } catch (err) {

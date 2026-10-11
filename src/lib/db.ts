@@ -245,6 +245,26 @@ async function initSchema() {
     );
   `)
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      amount NUMERIC(10,2) NOT NULL,
+      unit TEXT NOT NULL,
+      label TEXT,
+      price NUMERIC(10,2) NOT NULL,
+      images JSONB DEFAULT '[]',
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_product_variants_product ON product_variants(product_id);
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_images BOOLEAN DEFAULT false;
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id TEXT;
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT;
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 

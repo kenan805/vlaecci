@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/admin-guard'
 
 interface OrderItemRow {
   name: string
+  variant: string | null
   price: number
   qty: number
 }
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
               o.subtotal, o.discount_code, o.discount_amount, o.total, o.status, o.created_at,
               COALESCE(
                 json_agg(
-                  json_build_object('name', oi.product_name, 'price', oi.price, 'qty', oi.qty)
+                  json_build_object('name', oi.product_name, 'variant', oi.variant_label, 'price', oi.price, 'qty', oi.qty)
                 ) FILTER (WHERE oi.id IS NOT NULL),
                 '[]'
               ) AS items
@@ -53,7 +54,12 @@ export async function GET(req: NextRequest) {
       total: Number(o.total),
       status: o.status,
       createdAt: o.created_at,
-      items: (o.items || []).map((i) => ({ name: i.name, price: Number(i.price), qty: i.qty })),
+      items: (o.items || []).map((i) => ({
+        name: i.name,
+        variantLabel: i.variant || null,
+        price: Number(i.price),
+        qty: i.qty,
+      })),
     }))
 
     return NextResponse.json({ orders })

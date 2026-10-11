@@ -55,8 +55,12 @@ function NavigationLoaderInner() {
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const anchor = (e.target as HTMLElement).closest('a')
+      const target = e.target as HTMLElement
+      const anchor = target.closest('a')
       if (!anchor) return
+      // Controls inside a card link (size chips, add-to-cart) don't navigate.
+      const control = target.closest('button, input, select, textarea, [role="radio"]')
+      if (control && anchor.contains(control)) return
       const href = anchor.getAttribute('href')
       if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return
       if (anchor.target === '_blank' || anchor.hasAttribute('download')) return
