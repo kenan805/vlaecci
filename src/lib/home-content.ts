@@ -9,9 +9,8 @@ export interface BeforeAfterResult {
   description: string
   sortOrder: number
   isActive: boolean
-  /** Product this result belongs to (shown on its detail page), if any. */
-  productId: string | null
-  productName: string | null
+  /** Products whose detail pages show this result. */
+  products: { id: string; name: string }[]
   showOnHome: boolean
 }
 
@@ -33,8 +32,7 @@ interface ResultRow {
   description: string | null
   sort_order: number | null
   is_active: boolean | null
-  product_id: string | null
-  product_name: string | null
+  products: { id: string; name: string }[] | null
   show_on_home: boolean | null
 }
 
@@ -57,8 +55,7 @@ function mapResult(r: ResultRow): BeforeAfterResult {
     description: r.description || '',
     sortOrder: r.sort_order ?? 0,
     isActive: r.is_active ?? true,
-    productId: r.product_id,
-    productName: r.product_name,
+    products: r.products ?? [],
     showOnHome: r.show_on_home ?? true,
   }
 }
@@ -98,18 +95,42 @@ export async function listResults(
   if (filter.home) where.push('COALESCE(r.show_on_home, true) = true')
   if (filter.productId) {
     params.push(filter.productId)
-    where.push(`r.product_id = $${params.length}`)
+    where.push(
+      `EXISTS (SELECT 1 FROM before_after_products bp WHERE bp.result_id = r.id AND bp.product_id = $${params.length})`
+    )
   }
   const result = await query<ResultRow>(
     `SELECT r.id, r.before_image, r.after_image, r.title, r.description, r.sort_order, r.is_active,
-            r.product_id, p.name AS product_name, r.show_on_home
+            r.show_on_home,
+            (SELECT COALESCE(json_agg(json_build_object('id', p.id, 'name', p.name) ORDER BY p.name), '[]')
+               FROM before_after_products bp
+               JOIN products p ON p.id = bp.product_id
+              WHERE bp.result_id = r.id) AS products
      FROM before_after_results r
-     LEFT JOIN products p ON p.id = r.product_id
      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
      ORDER BY r.sort_order ASC, r.created_at ASC`,
     params
   )
   return result.rows.map(mapResult)
+}
+
+/** Normalizes the productIds sent by the admin form. Returns null when the field was not sent. */
+export function parseProductIds(raw: unknown): string[] | null {
+  if (raw === undefined) return null
+  if (!Array.isArray(raw)) return []
+  return Array.from(new Set(raw.filter((id): id is string => typeof id === 'string' && id !== '')))
+}
+
+/** Replaces the set of products a result is linked to (unknown product ids are ignored). */
+export async function setResultProducts(resultId: string, productIds: string[]): Promise<void> {
+  await query('DELETE FROM before_after_products WHERE result_id = $1', [resultId])
+  if (productIds.length === 0) return
+  await query(
+    `INSERT INTO before_after_products (result_id, product_id)
+     SELECT $1, id FROM products WHERE id = ANY($2::text[])
+     ON CONFLICT DO NOTHING`,
+    [resultId, productIds]
+  )
 }
 
 export async function listTestimonials(onlyActive: boolean): Promise<Testimonial[]> {

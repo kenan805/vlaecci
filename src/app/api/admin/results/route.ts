@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
-import { isAllowedImage, listResults } from '@/lib/home-content'
+import { isAllowedImage, listResults, parseProductIds, setResultProducts } from '@/lib/home-content'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { beforeImage, afterImage, title, description, sortOrder, isActive, productId, showOnHome } = body
+    const { beforeImage, afterImage, title, description, sortOrder, isActive, showOnHome } = body
 
     if (!isAllowedImage(beforeImage) || !isAllowedImage(afterImage)) {
       return NextResponse.json({ error: 'Əvvəl və sonra şəkilləri mütləqdir' }, { status: 400 })
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     const id = randomUUID()
     await query(
       `INSERT INTO before_after_results
-         (id, before_image, after_image, title, description, sort_order, is_active, product_id, show_on_home)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         (id, before_image, after_image, title, description, sort_order, is_active, show_on_home)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         id,
         beforeImage.trim(),
@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
         typeof description === 'string' ? description.trim() : '',
         Number.isFinite(Number(sortOrder)) ? Math.round(Number(sortOrder)) : 0,
         typeof isActive === 'boolean' ? isActive : true,
-        typeof productId === 'string' && productId ? productId : null,
         typeof showOnHome === 'boolean' ? showOnHome : true,
       ]
     )
+    await setResultProducts(id, parseProductIds(body.productIds) ?? [])
     return NextResponse.json({ id }, { status: 201 })
   } catch (err) {
     console.error('Admin results POST error:', err)

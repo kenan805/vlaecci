@@ -266,10 +266,14 @@ async function initSchema() {
   `)
 
   await db.query(`
-    ALTER TABLE before_after_results
-      ADD COLUMN IF NOT EXISTS product_id TEXT REFERENCES products(id) ON DELETE SET NULL;
     ALTER TABLE before_after_results ADD COLUMN IF NOT EXISTS show_on_home BOOLEAN DEFAULT true;
-    CREATE INDEX IF NOT EXISTS idx_before_after_product ON before_after_results(product_id);
+
+    CREATE TABLE IF NOT EXISTS before_after_products (
+      result_id TEXT NOT NULL REFERENCES before_after_results(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      PRIMARY KEY (result_id, product_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_before_after_products_product ON before_after_products(product_id);
   `)
 
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)

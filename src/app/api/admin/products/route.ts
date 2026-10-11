@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
               COALESCE(p.total_views, 0) AS total_views,
               COALESCE(p.unique_views, 0) AS unique_views,
               (SELECT COUNT(*)::text FROM product_reviews r WHERE r.product_id = p.id) AS review_count,
-              (SELECT COUNT(*)::text FROM before_after_results ba WHERE ba.product_id = p.id) AS result_count
+              (SELECT COUNT(*)::text FROM before_after_products bp WHERE bp.product_id = p.id) AS result_count
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY p.created_at DESC`

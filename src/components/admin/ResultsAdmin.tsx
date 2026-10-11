@@ -29,8 +29,7 @@ interface Result {
   description: string
   sortOrder: number
   isActive: boolean
-  productId: string | null
-  productName: string | null
+  products: { id: string; name: string }[]
   showOnHome: boolean
 }
 
@@ -40,7 +39,7 @@ interface FormState {
   title: string
   description: string
   sortOrder: string
-  productId: string
+  productIds: string[]
   showOnHome: boolean
 }
 
@@ -50,7 +49,7 @@ const EMPTY_FORM: FormState = {
   title: '',
   description: '',
   sortOrder: '0',
-  productId: '',
+  productIds: [],
   showOnHome: true,
 }
 
@@ -85,6 +84,64 @@ function ImageSlot({
           <ImageUploadButton onUploaded={onChange} />
         )}
       </div>
+    </div>
+  )
+}
+
+/** Selected products as removable chips plus a select to add more. */
+function ProductPicker({
+  products,
+  value,
+  onChange,
+}: {
+  products: { id: string; name: string }[]
+  value: string[]
+  onChange: (next: string[]) => void
+}) {
+  const selected = value
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is { id: string; name: string } => Boolean(p))
+  const remaining = products.filter((p) => !value.includes(p.id))
+
+  return (
+    <div className="rounded-xl border border-sand-200/70 bg-white p-2">
+      {selected.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {selected.map((p) => (
+            <span
+              key={p.id}
+              className="inline-flex items-center gap-1 rounded-full bg-accent-rose/15 py-1 pl-2.5 pr-1 text-xs font-medium text-brown-300"
+            >
+              {p.name}
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((id) => id !== p.id))}
+                className="rounded-full p-0.5 text-brown-100/70 hover:bg-white/70 hover:text-brown-300"
+                aria-label={`${p.name} sil`}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <select
+        value=""
+        onChange={(e) => e.target.value && onChange([...value, e.target.value])}
+        disabled={remaining.length === 0}
+        className={`${modernSelectClassName} border-dashed`}
+        style={selectChevronStyle}
+        aria-label="Məhsul əlavə et"
+      >
+        <option value="">
+          {remaining.length === 0 ? 'Bütün məhsullar seçilib' : '+ Məhsul əlavə et'}
+        </option>
+        {remaining.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -138,7 +195,7 @@ export function ResultsAdmin({
       title: r.title,
       description: r.description,
       sortOrder: String(r.sortOrder),
-      productId: r.productId ?? '',
+      productIds: r.products.map((p) => p.id),
       showOnHome: r.showOnHome,
     })
     setModalOpen(true)
@@ -156,7 +213,7 @@ export function ResultsAdmin({
       toast('Əvvəl və sonra şəkillərini yükləyin', 'error')
       return
     }
-    if (!form.productId && !form.showOnHome) {
+    if (form.productIds.length === 0 && !form.showOnHome) {
       toast('Nəticə heç yerdə görünməyəcək: məhsul seçin və ya ana səhifəni aktiv edin', 'error')
       return
     }
@@ -168,7 +225,7 @@ export function ResultsAdmin({
         title: form.title,
         description: form.description,
         sortOrder: Number(form.sortOrder) || 0,
-        productId: form.productId || null,
+        productIds: form.productIds,
         showOnHome: form.showOnHome,
       }
       const res = editing
@@ -275,12 +332,15 @@ export function ResultsAdmin({
                 <p className="text-sm font-medium text-brown-300 truncate">{r.title || 'Başlıqsız'}</p>
                 {r.description && <p className="text-xs text-brown-100/70 mt-0.5 line-clamp-2">{r.description}</p>}
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {r.productName && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent-rose/15 px-2 py-0.5 text-[11px] font-medium text-accent-rose">
+                  {r.products.map((p) => (
+                    <span
+                      key={p.id}
+                      className="inline-flex items-center gap-1 rounded-full bg-accent-rose/15 px-2 py-0.5 text-[11px] font-medium text-accent-rose"
+                    >
                       <Package size={11} />
-                      {r.productName}
+                      {p.name}
                     </span>
-                  )}
+                  ))}
                   {r.showOnHome && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-sand-200/60 px-2 py-0.5 text-[11px] font-medium text-brown-200">
                       <Home size={11} />
@@ -327,37 +387,27 @@ export function ResultsAdmin({
           }
         >
           <form id="result-form" onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
-              <div>
-                <label className={labelClassName}>Məhsul</label>
-                <select
-                  value={form.productId}
-                  onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
-                  className={modernSelectClassName}
-                  style={selectChevronStyle}
-                >
-                  <option value="">— Məhsula bağlı deyil —</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-cream-100/70 px-3 py-2">
-                <div>
-                  <p className="text-sm text-brown-300">Ana səhifədə göstər</p>
-                  <p className="text-xs text-brown-100/60">“Nəticələr danışır” bölməsində</p>
-                </div>
-                <Toggle
-                  checked={form.showOnHome}
-                  onChange={(v) => setForm((f) => ({ ...f, showOnHome: v }))}
-                  label="Ana səhifədə göstər"
-                />
-              </div>
-              <p className="text-xs text-brown-100/60 sm:col-span-2">
-                Məhsul seçilsə, nəticə həmin məhsulun səhifəsində “Əvvəl / Sonra” bölməsində göstəriləcək.
+            <div>
+              <label className={labelClassName}>Məhsullar</label>
+              <ProductPicker
+                products={products}
+                value={form.productIds}
+                onChange={(productIds) => setForm((f) => ({ ...f, productIds }))}
+              />
+              <p className="mt-1.5 text-xs text-brown-100/60">
+                Nəticə seçilən hər məhsulun səhifəsində “Əvvəl / Sonra” bölməsində göstəriləcək.
               </p>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-cream-100/70 px-3 py-2.5">
+              <div>
+                <p className="text-sm text-brown-300">Ana səhifədə göstər</p>
+                <p className="text-xs text-brown-100/60">“Nəticələr danışır” bölməsində</p>
+              </div>
+              <Toggle
+                checked={form.showOnHome}
+                onChange={(v) => setForm((f) => ({ ...f, showOnHome: v }))}
+                label="Ana səhifədə göstər"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <ImageSlot
