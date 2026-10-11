@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params
     const body = await req.json()
-    const { beforeImage, afterImage, title, description, sortOrder, isActive } = body
+    const { beforeImage, afterImage, title, description, sortOrder, isActive, productId, showOnHome } = body
 
     const sets: string[] = []
     const values: unknown[] = []
@@ -44,6 +44,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (typeof isActive === 'boolean') {
       sets.push(`is_active = $${sets.length + 1}`)
       values.push(isActive)
+    }
+    if (productId !== undefined) {
+      sets.push(`product_id = $${sets.length + 1}`)
+      values.push(typeof productId === 'string' && productId ? productId : null)
+    }
+    if (typeof showOnHome === 'boolean') {
+      sets.push(`show_on_home = $${sets.length + 1}`)
+      values.push(showOnHome)
     }
 
     if (sets.length === 0) {

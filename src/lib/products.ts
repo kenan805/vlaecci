@@ -3,6 +3,7 @@ import { query } from './db'
 import { sanitizeImageUrls } from './parse-image-urls'
 import { getHairTypeLabel, type HairType } from './constants'
 import { isVariantUnit, type ProductVariant, type VariantUnit } from './variants'
+import { listResults, type BeforeAfterResult } from './home-content'
 
 export function parseImages(images: unknown): string[] {
   if (Array.isArray(images)) return sanitizeImageUrls(images)
@@ -41,6 +42,8 @@ export interface ProductDetail {
   category: { name: string }
   variants: ProductVariant[]
   variantImages: boolean
+  /** Active before/after results linked to this product. */
+  beforeAfter: BeforeAfterResult[]
   reviews: ProductReview[]
 }
 
@@ -70,6 +73,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
   if (!row) return null
 
   const variants = (await loadVariants([row.id], true)).get(row.id) ?? []
+  const beforeAfter = await listResults({ productId: row.id })
 
   const reviewsResult = await query<{
     id: string
@@ -98,6 +102,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     category: { name: row.category_name || '' },
     variants,
     variantImages: row.variant_images ?? false,
+    beforeAfter,
     reviews: reviewsResult.rows.map((r) => ({
       id: r.id,
       authorName: r.author_name,

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const results = await listResults(false)
+    const results = await listResults()
     return NextResponse.json({ results })
   } catch (err) {
     console.error('Admin results error:', err)
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { beforeImage, afterImage, title, description, sortOrder, isActive } = body
+    const { beforeImage, afterImage, title, description, sortOrder, isActive, productId, showOnHome } = body
 
     if (!isAllowedImage(beforeImage) || !isAllowedImage(afterImage)) {
       return NextResponse.json({ error: 'Əvvəl və sonra şəkilləri mütləqdir' }, { status: 400 })
@@ -33,8 +33,9 @@ export async function POST(req: NextRequest) {
 
     const id = randomUUID()
     await query(
-      `INSERT INTO before_after_results (id, before_image, after_image, title, description, sort_order, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO before_after_results
+         (id, before_image, after_image, title, description, sort_order, is_active, product_id, show_on_home)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         id,
         beforeImage.trim(),
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
         typeof description === 'string' ? description.trim() : '',
         Number.isFinite(Number(sortOrder)) ? Math.round(Number(sortOrder)) : 0,
         typeof isActive === 'boolean' ? isActive : true,
+        typeof productId === 'string' && productId ? productId : null,
+        typeof showOnHome === 'boolean' ? showOnHome : true,
       ]
     )
     return NextResponse.json({ id }, { status: 201 })

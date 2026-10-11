@@ -3,13 +3,24 @@
 import { useEffect, useState } from 'react'
 import { ProductImage } from './ProductImage'
 import Link from 'next/link'
-import { ArrowLeft, Star, ChevronDown, ChevronUp, ShoppingBag, Check, Minus, Plus } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowDown,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  Check,
+  Minus,
+  Plus,
+} from 'lucide-react'
 import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import type { ProductDetail as ProductDetailType } from '@/lib/products'
 import { formatMoney, variantDisplayName, variantImages } from '@/lib/variants'
 import { VariantSelector } from './VariantSelector'
+import { BeforeAfterSlider } from './BeforeAfterSlider'
 
 interface ProductDetailProps {
   product: ProductDetailType
@@ -39,6 +50,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const shownImages = variantImages(product.images || [], variant, product.variantImages)
   const images = shownImages.length ? shownImages : ['']
   const price = variant ? variant.price : product.price
+
+  const teaser = product.beforeAfter?.[0] ?? null
 
   const selectVariant = (id: string) => {
     setVariantId(id)
@@ -121,6 +134,31 @@ export function ProductDetail({ product }: ProductDetailProps) {
               ))}
             </div>
           )}
+          {teaser && (
+            <a
+              href="#neticeler"
+              className="group mt-4 flex items-center gap-4 rounded-2xl border border-sand-200/70 bg-cream-100/70 p-3 pr-5 transition-colors hover:border-brown-300/30 hover:bg-cream-100"
+            >
+              <span className="relative flex h-16 w-24 shrink-0 overflow-hidden rounded-xl ring-1 ring-brown-300/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={teaser.beforeImage} alt="" className="h-full w-1/2 object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={teaser.afterImage} alt="" className="h-full w-1/2 object-cover" />
+                <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/90" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-accent-rose">
+                  Əvvəl / Sonra
+                </span>
+                <span className="mt-0.5 block text-sm font-medium text-brown-300">
+                  {product.beforeAfter.length > 1
+                    ? `${product.beforeAfter.length} real nəticəyə baxın`
+                    : 'Real nəticəyə baxın'}
+                </span>
+              </span>
+              <ArrowDown size={18} className="shrink-0 text-brown-100 transition-transform group-hover:translate-y-0.5" />
+            </a>
+          )}
         </div>
 
         <div>
@@ -200,6 +238,21 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Link>
         </div>
       </div>
+
+      {product.beforeAfter?.length > 0 && (
+        <section
+          id="neticeler"
+          className="mb-16 scroll-mt-28 rounded-[32px] bg-cream-100/60 px-4 py-12 sm:px-8 md:py-16"
+        >
+          <div className="mb-10 text-center">
+            <h2 className="font-serif text-3xl font-medium text-brown-300 md:text-4xl">Nəticələr özü danışır</h2>
+            <p className="mx-auto mt-3 max-w-xl text-brown-100/80">
+              {product.name} istifadə edən müştərilərimizin real əvvəl və sonra görüntüləri.
+            </p>
+          </div>
+          <BeforeAfterSlider results={product.beforeAfter} />
+        </section>
+      )}
 
       <div className="max-w-3xl">
         {product.ingredients && (

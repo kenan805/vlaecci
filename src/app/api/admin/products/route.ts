@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       total_views: number | null
       unique_views: number | null
       review_count: string
+      result_count: string
     }>(
       `SELECT p.id, p.name, p.slug, p.description, p.ingredients, p.how_to_use,
               p.price, p.images, p.variant_images, p.category_id, c.name AS category_name,
@@ -37,7 +38,8 @@ export async function GET(req: NextRequest) {
               p.created_at, p.updated_at,
               COALESCE(p.total_views, 0) AS total_views,
               COALESCE(p.unique_views, 0) AS unique_views,
-              (SELECT COUNT(*)::text FROM product_reviews r WHERE r.product_id = p.id) AS review_count
+              (SELECT COUNT(*)::text FROM product_reviews r WHERE r.product_id = p.id) AS review_count,
+              (SELECT COUNT(*)::text FROM before_after_results ba WHERE ba.product_id = p.id) AS result_count
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        ORDER BY p.created_at DESC`
@@ -69,6 +71,7 @@ export async function GET(req: NextRequest) {
       totalViews: p.total_views ?? 0,
       uniqueViews: p.unique_views ?? 0,
       reviewCount: Number(p.review_count) || 0,
+      resultCount: Number(p.result_count) || 0,
     }))
 
     return NextResponse.json({ products })

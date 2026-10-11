@@ -265,6 +265,13 @@ async function initSchema() {
     ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT;
   `)
 
+  await db.query(`
+    ALTER TABLE before_after_results
+      ADD COLUMN IF NOT EXISTS product_id TEXT REFERENCES products(id) ON DELETE SET NULL;
+    ALTER TABLE before_after_results ADD COLUMN IF NOT EXISTS show_on_home BOOLEAN DEFAULT true;
+    CREATE INDEX IF NOT EXISTS idx_before_after_product ON before_after_results(product_id);
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 

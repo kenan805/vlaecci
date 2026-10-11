@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, ImageIcon, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, ImageIcon, X, Package, Home } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { ImageUploadButton } from '@/components/ImageUploadButton'
 import { useToast } from './Toast'
@@ -17,6 +17,8 @@ import {
   Toggle,
   fieldClassName,
   labelClassName,
+  modernSelectClassName,
+  selectChevronStyle,
 } from './ui'
 
 interface Result {
@@ -27,6 +29,9 @@ interface Result {
   description: string
   sortOrder: number
   isActive: boolean
+  productId: string | null
+  productName: string | null
+  showOnHome: boolean
 }
 
 interface FormState {
@@ -35,9 +40,19 @@ interface FormState {
   title: string
   description: string
   sortOrder: string
+  productId: string
+  showOnHome: boolean
 }
 
-const EMPTY_FORM: FormState = { beforeImage: '', afterImage: '', title: '', description: '', sortOrder: '0' }
+const EMPTY_FORM: FormState = {
+  beforeImage: '',
+  afterImage: '',
+  title: '',
+  description: '',
+  sortOrder: '0',
+  productId: '',
+  showOnHome: true,
+}
 
 function ImageSlot({
   label,
@@ -74,7 +89,13 @@ function ImageSlot({
   )
 }
 
-export function ResultsAdmin() {
+export function ResultsAdmin({
+  products,
+  onUpdate,
+}: {
+  products: { id: string; name: string }[]
+  onUpdate?: () => void
+}) {
   const { toast } = useToast()
 
   const [results, setResults] = useState<Result[]>([])
@@ -117,6 +138,8 @@ export function ResultsAdmin() {
       title: r.title,
       description: r.description,
       sortOrder: String(r.sortOrder),
+      productId: r.productId ?? '',
+      showOnHome: r.showOnHome,
     })
     setModalOpen(true)
   }
@@ -133,6 +156,10 @@ export function ResultsAdmin() {
       toast('Əvvəl və sonra şəkillərini yükləyin', 'error')
       return
     }
+    if (!form.productId && !form.showOnHome) {
+      toast('Nəticə heç yerdə görünməyəcək: məhsul seçin və ya ana səhifəni aktiv edin', 'error')
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -141,6 +168,8 @@ export function ResultsAdmin() {
         title: form.title,
         description: form.description,
         sortOrder: Number(form.sortOrder) || 0,
+        productId: form.productId || null,
+        showOnHome: form.showOnHome,
       }
       const res = editing
         ? await apiFetch(`/admin/results/${editing.id}`, {
@@ -158,6 +187,7 @@ export function ResultsAdmin() {
       toast(editing ? 'Nəticə yeniləndi' : 'Nəticə əlavə edildi')
       closeModal()
       await fetchResults()
+      onUpdate?.()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Xəta baş verdi', 'error')
     } finally {
@@ -173,6 +203,7 @@ export function ResultsAdmin() {
       if (!res.ok) throw new Error(data.error || 'Xəta')
       toast('Nəticə silindi')
       await fetchResults()
+      onUpdate?.()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Xəta baş verdi', 'error')
     } finally {
@@ -190,6 +221,7 @@ export function ResultsAdmin() {
       if (!res.ok) throw new Error('Xəta')
       toast(r.isActive ? 'Nəticə gizlədildi' : 'Nəticə saytda göstərilir')
       await fetchResults()
+      onUpdate?.()
     } catch {
       toast('Status dəyişmədi', 'error')
     }
@@ -199,7 +231,7 @@ export function ResultsAdmin() {
     <div>
       <PageHeader
         title="Əvvəl / Sonra"
-        subtitle="Ana səhifədəki nəticə şəkillərini idarə et"
+        subtitle="Ana səhifədə və məhsul səhifələrində göstərilən nəticə şəkilləri"
         action={
           <PrimaryButton onClick={openCreate}>
             <Plus size={18} />
@@ -242,6 +274,20 @@ export function ResultsAdmin() {
               <div className="p-4">
                 <p className="text-sm font-medium text-brown-300 truncate">{r.title || 'Başlıqsız'}</p>
                 {r.description && <p className="text-xs text-brown-100/70 mt-0.5 line-clamp-2">{r.description}</p>}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {r.productName && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-accent-rose/15 px-2 py-0.5 text-[11px] font-medium text-accent-rose">
+                      <Package size={11} />
+                      {r.productName}
+                    </span>
+                  )}
+                  {r.showOnHome && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-sand-200/60 px-2 py-0.5 text-[11px] font-medium text-brown-200">
+                      <Home size={11} />
+                      Ana səhifə
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2.5">
                     <Toggle checked={r.isActive} onChange={() => toggleActive(r)} label="Status" />
@@ -281,6 +327,38 @@ export function ResultsAdmin() {
           }
         >
           <form id="result-form" onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
+              <div>
+                <label className={labelClassName}>Məhsul</label>
+                <select
+                  value={form.productId}
+                  onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
+                  className={modernSelectClassName}
+                  style={selectChevronStyle}
+                >
+                  <option value="">— Məhsula bağlı deyil —</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-cream-100/70 px-3 py-2">
+                <div>
+                  <p className="text-sm text-brown-300">Ana səhifədə göstər</p>
+                  <p className="text-xs text-brown-100/60">“Nəticələr danışır” bölməsində</p>
+                </div>
+                <Toggle
+                  checked={form.showOnHome}
+                  onChange={(v) => setForm((f) => ({ ...f, showOnHome: v }))}
+                  label="Ana səhifədə göstər"
+                />
+              </div>
+              <p className="text-xs text-brown-100/60 sm:col-span-2">
+                Məhsul seçilsə, nəticə həmin məhsulun səhifəsində “Əvvəl / Sonra” bölməsində göstəriləcək.
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <ImageSlot
                 label="Əvvəl şəkli *"
