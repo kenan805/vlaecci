@@ -17,7 +17,7 @@ const results = [
   },
   {
     metric: '4x',
-    label: 'Sürətli böyümə',
+    label: 'Daha tez uzanma',
     desc: 'Vitamin və mineral dəstəyi ilə',
   },
 ]
