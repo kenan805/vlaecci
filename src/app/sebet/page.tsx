@@ -9,6 +9,7 @@ import { Footer } from '@/components/Footer'
 import { ProductImage } from '@/components/ProductImage'
 import { useCart } from '@/lib/cart'
 import { apiFetch } from '@/lib/api'
+import { formatAzPhone, isValidAzPhone, PHONE_PLACEHOLDER } from '@/lib/phone'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+994557087999'
 
@@ -116,6 +117,10 @@ export default function CartPage() {
     setOrderError('')
     if (!name.trim() || !phone.trim()) {
       setFormError('Ad və telefon mütləqdir')
+      return
+    }
+    if (!isValidAzPhone(phone)) {
+      setFormError('Telefon nömrəsi düzgün deyil. Nümunə: +994 (099) 333-44-05')
       return
     }
     if (items.length === 0) return
@@ -399,9 +404,11 @@ export default function CartPage() {
               />
               <input
                 type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Telefon *"
+                onChange={(e) => setPhone(formatAzPhone(e.target.value))}
+                placeholder={`Telefon * ${PHONE_PLACEHOLDER}`}
                 className={inputClass}
               />
               <input
