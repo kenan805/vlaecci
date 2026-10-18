@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
-import { isAllowedImage } from '@/lib/home-content'
+import { isAllowedImage, parseProductIds, setResultProducts } from '@/lib/home-content'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req)
@@ -10,7 +10,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params
     const body = await req.json()
-    const { beforeImage, afterImage, title, description, sortOrder, isActive } = body
+    const { beforeImage, afterImage, title, description, sortOrder, isActive, showOnHome } = body
+    const productIds = parseProductIds(body.productIds)
 
     const sets: string[] = []
     const values: unknown[] = []
@@ -45,13 +46,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       sets.push(`is_active = $${sets.length + 1}`)
       values.push(isActive)
     }
+    if (typeof showOnHome === 'boolean') {
+      sets.push(`show_on_home = $${sets.length + 1}`)
+      values.push(showOnHome)
+    }
 
-    if (sets.length === 0) {
+    if (sets.length === 0 && productIds === null) {
       return NextResponse.json({ error: 'Yeniləmə üçün məlumat yoxdur' }, { status: 400 })
     }
 
-    values.push(id)
-    await query(`UPDATE before_after_results SET ${sets.join(', ')} WHERE id = $${values.length}`, values)
+    if (sets.length > 0) {
+      values.push(id)
+      await query(`UPDATE before_after_results SET ${sets.join(', ')} WHERE id = $${values.length}`, values)
+    }
+    if (productIds !== null) await setResultProducts(id, productIds)
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Admin results PUT error:', err)

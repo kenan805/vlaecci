@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const [results, testimonials] = await Promise.all([
-    listResults(true).catch((err) => {
+    listResults({ home: true }).catch((err) => {
       console.error('Home results error:', err)
       return []
     }),
