@@ -17,7 +17,7 @@ const benefits = [
   {
     icon: Shield,
     title: 'Dermatoloq təsdiqli',
-    desc: 'Həssas dəri və saçlı dəri üçün test edilmiş, təhlükəsiz məhsullar.',
+    desc: 'Dermatoloji testlərdən keçmiş, həssas dəri və baş dərisi üçün uyğun, təhlükəsiz məhsullar.',
   },
   {
     icon: Sparkles,

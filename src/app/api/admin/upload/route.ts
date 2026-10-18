@@ -30,8 +30,10 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const contentType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
 
+    // Use Blob whenever it is configured — also locally, so images uploaded from localhost
+    // against a shared (Neon) database are reachable from every environment.
     const onVercel = Boolean(process.env.VERCEL || process.env.VERCEL_ENV)
-    if (onVercel) {
+    if (onVercel || process.env.BLOB_READ_WRITE_TOKEN) {
       const url = await uploadProductImage(buffer, pathname, contentType)
       return NextResponse.json({ url, pathname })
     }

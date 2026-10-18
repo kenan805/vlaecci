@@ -3,11 +3,24 @@
 import { useEffect, useState } from 'react'
 import { ProductImage } from './ProductImage'
 import Link from 'next/link'
-import { ArrowLeft, Star, ChevronDown, ChevronUp, ShoppingBag, Check, Minus, Plus } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowDown,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
+  Check,
+  Minus,
+  Plus,
+} from 'lucide-react'
 import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import type { ProductDetail as ProductDetailType } from '@/lib/products'
+import { formatMoney, variantDisplayName, variantImages } from '@/lib/variants'
+import { VariantSelector } from './VariantSelector'
+import { BeforeAfterSlider } from './BeforeAfterSlider'
 
 interface ProductDetailProps {
   product: ProductDetailType
@@ -32,7 +45,18 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
 
 export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0)
-  const images = product.images?.length ? product.images : ['']
+  const [variantId, setVariantId] = useState<string | null>(product.variants?.[0]?.id ?? null)
+  const variant = product.variants?.find((v) => v.id === variantId) ?? null
+  const shownImages = variantImages(product.images || [], variant, product.variantImages)
+  const images = shownImages.length ? shownImages : ['']
+  const price = variant ? variant.price : product.price
+
+  const teaser = product.beforeAfter?.[0] ?? null
+
+  const selectVariant = (id: string) => {
+    setVariantId(id)
+    setActiveImage(0)
+  }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
@@ -42,10 +66,12 @@ export function ProductDetail({ product }: ProductDetailProps) {
     add(
       {
         productId: product.id,
+        variantId: variant?.id ?? null,
+        variantLabel: variant ? variantDisplayName(variant) : null,
         name: product.name,
         slug: product.slug,
-        price: product.price,
-        image: product.images?.[0] ?? null,
+        price,
+        image: shownImages[0] ?? null,
       },
       qty
     )
@@ -108,6 +134,31 @@ export function ProductDetail({ product }: ProductDetailProps) {
               ))}
             </div>
           )}
+          {teaser && (
+            <a
+              href="#neticeler"
+              className="group mt-4 flex items-center gap-4 rounded-2xl border border-sand-200/70 bg-cream-100/70 p-3 pr-5 transition-colors hover:border-brown-300/30 hover:bg-cream-100"
+            >
+              <span className="relative flex h-16 w-24 shrink-0 overflow-hidden rounded-xl ring-1 ring-brown-300/10">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={teaser.beforeImage} alt="" className="h-full w-1/2 object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={teaser.afterImage} alt="" className="h-full w-1/2 object-cover" />
+                <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-white/90" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.2em] text-accent-rose">
+                  Əvvəl / Sonra
+                </span>
+                <span className="mt-0.5 block text-sm font-medium text-brown-300">
+                  {product.beforeAfter.length > 1
+                    ? `${product.beforeAfter.length} real nəticəyə baxın`
+                    : 'Real nəticəyə baxın'}
+                </span>
+              </span>
+              <ArrowDown size={18} className="shrink-0 text-brown-100 transition-transform group-hover:translate-y-0.5" />
+            </a>
+          )}
         </div>
 
         <div>
@@ -115,7 +166,16 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-4">
             {product.name}
           </h1>
-          <p className="text-4xl font-medium text-brown-300 mb-6">{product.price} ₼</p>
+          <p className="text-4xl font-medium text-brown-300 mb-6">{formatMoney(price)} ₼</p>
+          {product.variants?.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-brown-200 mb-2.5">
+                Həcm:{' '}
+                <span className="text-brown-300">{variant ? variantDisplayName(variant) : ''}</span>
+              </p>
+              <VariantSelector variants={product.variants} value={variant?.id ?? null} onChange={selectVariant} />
+            </div>
+          )}
           <p className="text-brown-100/90 leading-relaxed mb-8">{product.description}</p>
 
           <div className="flex items-stretch gap-3 mb-6">
@@ -178,6 +238,21 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Link>
         </div>
       </div>
+
+      {product.beforeAfter?.length > 0 && (
+        <section
+          id="neticeler"
+          className="mb-16 scroll-mt-28 rounded-[32px] bg-cream-100/60 px-4 py-12 sm:px-8 md:py-16"
+        >
+          <div className="mb-10 text-center">
+            <h2 className="font-serif text-3xl font-medium text-brown-300 md:text-4xl">Nəticələr özü danışır</h2>
+            <p className="mx-auto mt-3 max-w-xl text-brown-100/80">
+              {product.name} istifadə edən müştərilərimizin real əvvəl və sonra görüntüləri.
+            </p>
+          </div>
+          <BeforeAfterSlider results={product.beforeAfter} />
+        </section>
+      )}
 
       <div className="max-w-3xl">
         {product.ingredients && (

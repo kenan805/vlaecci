@@ -221,6 +221,61 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
   `)
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS before_after_results (
+      id TEXT PRIMARY KEY,
+      before_image TEXT NOT NULL,
+      after_image TEXT NOT NULL,
+      title TEXT,
+      description TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      handle TEXT,
+      text TEXT NOT NULL,
+      rating INTEGER DEFAULT 5,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `)
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      amount NUMERIC(10,2) NOT NULL,
+      unit TEXT NOT NULL,
+      label TEXT,
+      price NUMERIC(10,2) NOT NULL,
+      images JSONB DEFAULT '[]',
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_product_variants_product ON product_variants(product_id);
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS variant_images BOOLEAN DEFAULT false;
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id TEXT;
+    ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label TEXT;
+  `)
+
+  await db.query(`
+    ALTER TABLE before_after_results ADD COLUMN IF NOT EXISTS show_on_home BOOLEAN DEFAULT true;
+
+    CREATE TABLE IF NOT EXISTS before_after_products (
+      result_id TEXT NOT NULL REFERENCES before_after_results(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      PRIMARY KEY (result_id, product_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_before_after_products_product ON before_after_products(product_id);
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 
