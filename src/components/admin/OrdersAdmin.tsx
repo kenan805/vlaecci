@@ -20,6 +20,7 @@ type OrderStatus = 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelle
 
 interface OrderItem {
   name: string
+  variantLabel?: string | null
   price: number
   qty: number
 }
@@ -351,7 +352,14 @@ export function OrdersAdmin() {
                   <tbody>
                     {viewing.items.map((item, i) => (
                       <tr key={i} className="border-b border-sand-200/40 last:border-0">
-                        <td className="px-3 py-2 text-brown-300">{item.name}</td>
+                        <td className="px-3 py-2 text-brown-300">
+                          {item.name}
+                          {item.variantLabel && (
+                            <span className="ml-1.5 inline-block rounded-full bg-sand-200/60 px-2 py-0.5 text-[11px] font-medium text-brown-200">
+                              {item.variantLabel}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-right text-brown-100 tabular-nums whitespace-nowrap">{manat(item.price)}</td>
                         <td className="px-3 py-2 text-right text-brown-100 tabular-nums">{item.qty}</td>
                         <td className="px-3 py-2 text-right text-brown-300 font-medium tabular-nums whitespace-nowrap">

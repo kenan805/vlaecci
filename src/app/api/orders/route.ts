@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { formatAzPhone, isValidAzPhone } from '@/lib/phone'
+import { loadVariants } from '@/lib/products'
+import { variantDisplayName } from '@/lib/variants'
 
 interface IncomingItem {
   productId: string
+  variantId?: string | null
   qty: number
 }
 
@@ -30,19 +33,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Telefon nömrəsi düzgün deyil' }, { status: 400 })
     }
 
-    // Aggregate requested quantities per product
-    const qtyByProduct = new Map<string, number>()
+    // Aggregate requested quantities per cart line (product + selected variant)
+    const lines = new Map<string, { productId: string; variantId: string | null; qty: number }>()
     for (const it of rawItems) {
       if (!it || typeof it.productId !== 'string') continue
+      const variantId = typeof it.variantId === 'string' && it.variantId ? it.variantId : null
       const qty = Math.max(1, Math.floor(Number(it.qty) || 1))
-      qtyByProduct.set(it.productId, (qtyByProduct.get(it.productId) || 0) + qty)
+      const key = `${it.productId}::${variantId ?? ''}`
+      const line = lines.get(key)
+      if (line) line.qty += qty
+      else lines.set(key, { productId: it.productId, variantId, qty })
     }
-    if (qtyByProduct.size === 0) {
+    if (lines.size === 0) {
       return NextResponse.json({ error: 'Səbət boşdur' }, { status: 400 })
     }
 
     // Authoritative prices from the DB (only active products in active categories)
-    const ids = Array.from(qtyByProduct.keys())
+    const ids = Array.from(new Set(Array.from(lines.values()).map((l) => l.productId)))
     const productsResult = await query<{ id: string; name: string; price: string }>(
       `SELECT p.id, p.name, p.price
        FROM products p
@@ -52,12 +59,46 @@ export async function POST(req: NextRequest) {
          AND COALESCE(c.is_active, true) = true`,
       [ids]
     )
+    const productsById = new Map(productsResult.rows.map((p) => [p.id, p]))
+    const variantsByProduct = await loadVariants(ids, true)
 
-    const lineItems = productsResult.rows.map((p) => {
-      const qty = qtyByProduct.get(p.id) || 1
-      const price = Number(p.price)
-      return { productId: p.id, name: p.name, price, qty, lineTotal: round(price * qty) }
-    })
+    const lineItems: {
+      productId: string
+      variantId: string | null
+      variantLabel: string | null
+      name: string
+      price: number
+      qty: number
+      lineTotal: number
+    }[] = []
+    for (const line of Array.from(lines.values())) {
+      const product = productsById.get(line.productId)
+      if (!product) continue
+      const variants = variantsByProduct.get(product.id) ?? []
+      let price = Number(product.price)
+      let variantLabel: string | null = null
+      if (variants.length > 0 || line.variantId) {
+        // Products with sizes must be ordered in one of their current, active sizes.
+        const variant = variants.find((v) => v.id === line.variantId)
+        if (!variant) {
+          return NextResponse.json(
+            { error: `"${product.name}" üçün seçilmiş həcm artıq mövcud deyil. Səbətdən silib yenidən əlavə edin.` },
+            { status: 400 }
+          )
+        }
+        price = variant.price
+        variantLabel = variantDisplayName(variant)
+      }
+      lineItems.push({
+        productId: product.id,
+        variantId: variantLabel ? line.variantId : null,
+        variantLabel,
+        name: product.name,
+        price,
+        qty: line.qty,
+        lineTotal: round(price * line.qty),
+      })
+    }
 
     if (lineItems.length === 0) {
       return NextResponse.json({ error: 'Məhsullar mövcud deyil' }, { status: 400 })
@@ -108,9 +149,9 @@ export async function POST(req: NextRequest) {
 
     for (const li of lineItems) {
       await query(
-        `INSERT INTO order_items (id, order_id, product_id, product_name, price, qty)
-         VALUES ($1,$2,$3,$4,$5,$6)`,
-        [randomUUID(), orderId, li.productId, li.name, li.price, li.qty]
+        `INSERT INTO order_items (id, order_id, product_id, product_name, price, qty, variant_id, variant_label)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [randomUUID(), orderId, li.productId, li.name, li.price, li.qty, li.variantId, li.variantLabel]
       )
     }
 
@@ -124,7 +165,7 @@ export async function POST(req: NextRequest) {
       discountPercentage,
       discountAmount,
       total,
-      items: lineItems.map((i) => ({ name: i.name, price: i.price, qty: i.qty })),
+      items: lineItems.map((i) => ({ name: i.name, variantLabel: i.variantLabel, price: i.price, qty: i.qty })),
     })
   } catch (err) {
     console.error('Order create error:', err)

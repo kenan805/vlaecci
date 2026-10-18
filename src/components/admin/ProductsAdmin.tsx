@@ -31,8 +31,10 @@ import { apiFetch } from '@/lib/api'
 import { HAIR_TYPES, getHairTypeLabel } from '@/lib/constants'
 import { compressImageFile } from '@/lib/compress-image'
 import { isValidImageUrl } from '@/lib/parse-image-urls'
+import { variantSize, type ProductVariant } from '@/lib/variants'
 import { ConfirmModal } from './ConfirmModal'
 import { useToast } from './Toast'
+import { VariantEditor, fromDrafts, toDrafts, validateDrafts, type VariantDraft } from './VariantEditor'
 
 type ProductStatus = 'draft' | 'active' | 'deactive'
 
@@ -45,6 +47,8 @@ export interface Product {
   howToUse?: string
   price: number
   images?: string[]
+  variants?: ProductVariant[]
+  variantImages?: boolean
   categoryId?: string
   category?: { name: string }
   status: ProductStatus
@@ -137,6 +141,22 @@ function formatDate(value?: string | null) {
 
 function formatPrice(value: number) {
   return `${value} ₼`
+}
+
+/** "15 ₼" or "15–45 ₼" when the product has several active sizes. */
+function productPriceLabel(p: Pick<Product, 'price' | 'variants'>) {
+  const prices = (p.variants ?? []).filter((v) => v.isActive).map((v) => v.price)
+  if (prices.length === 0) return formatPrice(p.price)
+  const min = Math.min(...prices)
+  const max = Math.max(...prices)
+  return min === max ? formatPrice(min) : `${min}–${max} ₼`
+}
+
+function productSizesLabel(p: Pick<Product, 'variants'>) {
+  return (p.variants ?? [])
+    .filter((v) => v.isActive)
+    .map((v) => variantSize(v))
+    .join(' · ')
 }
 
 function roundPrice(value: number) {
@@ -326,9 +346,18 @@ function ProductFormModal({
   const [status, setStatus] = useState<ProductStatus>(product?.status || 'active')
   const [imageUrl, setImageUrl] = useState(product?.images?.[0] || '')
   const [categoryId, setCategoryId] = useState(product?.categoryId || '')
+  const [variants, setVariants] = useState<VariantDraft[]>(() => toDrafts(product?.variants))
+  const [perVariantImages, setPerVariantImages] = useState(product?.variantImages ?? false)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
+
+  const hasVariants = variants.length > 0
+  const variantPrices = variants
+    .filter((v) => v.isActive && v.price !== '')
+    .map((v) => Number(v.price.replace(',', '.')))
+    .filter((n) => Number.isFinite(n))
+  const lowestVariantPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : null
 
   useEffect(() => {
     if (categories.length > 0 && !categoryId) {
@@ -378,6 +407,11 @@ function ProductFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const variantError = validateDrafts(variants)
+    if (variantError) {
+      toast(variantError, 'error')
+      return
+    }
     setLoading(true)
     try {
       const url = product ? `/admin/products/${product.id}` : '/admin/products'
@@ -390,10 +424,12 @@ function ProductFormModal({
           description,
           ingredients,
           howToUse,
-          price: roundPrice(Number(price)),
+          price: hasVariants ? lowestVariantPrice ?? 0 : roundPrice(Number(price)),
           images: imageUrl ? [imageUrl] : [],
           categoryId: categoryId || categories[0]?.id,
           status,
+          variants: fromDrafts(variants, perVariantImages),
+          variantImages: perVariantImages,
         }),
       })
       const data = await res.json()
@@ -442,15 +478,22 @@ function ProductFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-brown-100 mb-1.5">Qiymət (₼)</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={price}
-              onChange={(e) => handlePriceChange(e.target.value)}
-              className={fieldClassName}
-              required
-            />
+            {hasVariants ? (
+              <div className={`${fieldClassName} bg-sand-200/30 text-brown-100`}>
+                {lowestVariantPrice != null ? `${lowestVariantPrice} ₼-dan` : 'Variantlardan'}
+                <span className="ml-1 text-xs text-brown-100/60">· həcmlərə görə</span>
+              </div>
+            ) : (
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className={fieldClassName}
+                required
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-brown-100 mb-1.5">Kateqoriya</label>
@@ -470,6 +513,13 @@ function ProductFormModal({
             </select>
           </div>
         </div>
+
+        <VariantEditor
+          drafts={variants}
+          onChange={setVariants}
+          perVariantImages={perVariantImages}
+          onPerVariantImagesChange={setPerVariantImages}
+        />
 
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Status</label>
@@ -515,7 +565,9 @@ function ProductFormModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-brown-100 mb-1.5">Şəkil</label>
+          <label className="block text-sm font-medium text-brown-100 mb-1.5">
+            {hasVariants && perVariantImages ? 'Əsas şəkil' : 'Şəkil'}
+          </label>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           {!imageUrl ? (
             <button
@@ -960,7 +1012,7 @@ function ProductViewModal({ product, onClose }: { product: Product; onClose: () 
   const img = product.images?.[0]
 
   const stats: { label: string; value: string | number }[] = [
-    { label: 'Qiymət', value: formatPrice(product.price) },
+    { label: 'Qiymət', value: productPriceLabel(product) },
     { label: 'Ümumi baxış', value: product.totalViews ?? 0 },
     { label: 'Unikal baxış', value: product.uniqueViews ?? 0 },
     { label: 'Rəylər', value: product.reviewCount ?? 0 },
@@ -1017,6 +1069,29 @@ function ProductViewModal({ product, onClose }: { product: Product; onClose: () 
               <p className="text-sm text-brown-100/90 leading-relaxed whitespace-pre-line">{product.description || '—'}</p>
             </div>
           </div>
+
+          {(product.variants?.length ?? 0) > 0 && (
+            <section>
+              <h5 className="text-sm font-semibold text-brown-300 mb-1.5">Həcmlər</h5>
+              <div className="flex flex-wrap gap-2">
+                {product.variants!.map((v) => (
+                  <div
+                    key={v.id}
+                    className={`rounded-xl border border-sand-200/70 bg-cream-50 px-3 py-2 ${v.isActive ? '' : 'opacity-50'}`}
+                  >
+                    <p className="text-sm font-medium text-brown-300">
+                      {variantSize(v)} · {formatPrice(v.price)}
+                    </p>
+                    {(v.label || !v.isActive) && (
+                      <p className="text-[11px] text-brown-100/60">
+                        {[v.label, v.isActive ? '' : 'Gizli'].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {product.ingredients && (
             <section>
@@ -1633,7 +1708,12 @@ export function ProductsAdmin({
                         <div className="font-medium text-brown-300 text-sm">{p.name}</div>
                       </td>
                       <td className="px-4 py-3 text-sm text-brown-100">{p.category?.name || '—'}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-brown-300 whitespace-nowrap tabular-nums">{formatPrice(p.price)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-brown-300 whitespace-nowrap tabular-nums">
+                        {productPriceLabel(p)}
+                        {productSizesLabel(p) && (
+                          <span className="block text-[11px] font-normal text-brown-100/60">{productSizesLabel(p)}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <button
                           type="button"
@@ -1785,7 +1865,7 @@ export function ProductsAdmin({
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-brown-100/70">
                       <span className="truncate">{p.category?.name || '—'}</span>
                       <span className="text-brown-100/30">·</span>
-                      <span className="font-semibold text-brown-300 tabular-nums">{formatPrice(p.price)}</span>
+                      <span className="font-semibold text-brown-300 tabular-nums">{productPriceLabel(p)}</span>
                     </div>
                   </div>
 
