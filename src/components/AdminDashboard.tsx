@@ -21,6 +21,7 @@ import {
   ShoppingBag,
   Images,
   Inbox,
+  Star,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { CategoryManager } from './admin/CategoryManager'
@@ -34,6 +35,7 @@ import { OrdersAdmin } from './admin/OrdersAdmin'
 import { ResultsAdmin } from './admin/ResultsAdmin'
 import { MessagesAdmin } from './admin/MessagesAdmin'
 import { TestimonialsAdmin } from './admin/TestimonialsAdmin'
+import { ReviewsAdmin } from './admin/ReviewsAdmin'
 import { ThemeToggle } from './admin/ThemeToggle'
 import { ToastProvider } from './admin/Toast'
 
@@ -41,6 +43,7 @@ type Tab =
   | 'stats'
   | 'products'
   | 'orders'
+  | 'reviews'
   | 'categories'
   | 'analysis'
   | 'leads'
@@ -81,6 +84,7 @@ function AdminDashboardInner() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [pendingReviews, setPendingReviews] = useState(0)
 
   useEffect(() => {
     const saved = (typeof window !== 'undefined' && localStorage.getItem('vlaecci-admin-theme')) as
@@ -116,11 +120,12 @@ function AdminDashboardInner() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [pRes, dRes, catRes, meRes] = await Promise.all([
+      const [pRes, dRes, catRes, meRes, revRes] = await Promise.all([
         apiFetch('/admin/products'),
         apiFetch('/admin/discounts'),
         apiFetch('/admin/categories'),
         apiFetch('/admin/profile'),
+        apiFetch('/admin/reviews?status=pending'),
       ])
       if (pRes.status === 401 || meRes.status === 401) {
         router.push('/admin/login')
@@ -135,6 +140,10 @@ function AdminDashboardInner() {
       )
       setDiscounts(dData.codes || [])
       setCategories(catData.categories || [])
+      if (revRes.ok) {
+        const revData = await revRes.json()
+        setPendingReviews(revData.counts?.pending ?? 0)
+      }
       if (meRes.ok) {
         const me = await meRes.json()
         if (me.email) setAdminUser({ email: me.email, avatarUrl: me.avatarUrl ?? null })
@@ -178,6 +187,7 @@ function AdminDashboardInner() {
     { id: 'stats' as Tab, label: 'İdarə paneli', icon: LayoutDashboard },
     { id: 'products' as Tab, label: 'Məhsullar', icon: Package },
     { id: 'orders' as Tab, label: 'Sifarişlər', icon: ShoppingBag },
+    { id: 'reviews' as Tab, label: 'Məhsul rəyləri', icon: Star, badge: pendingReviews },
     { id: 'categories' as Tab, label: 'Kateqoriyalar', icon: FolderOpen },
     { id: 'analysis' as Tab, label: 'Saç Analizi', icon: Sparkles },
     { id: 'leads' as Tab, label: 'Analiz nəticələri', icon: ClipboardList },
@@ -238,8 +248,23 @@ function AdminDashboardInner() {
                   sidebarOpen ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'
                 } ${active ? 'bg-brown-300 text-cream-50 shadow-sm' : 'text-brown-100 hover:bg-sand-200/50'}`}
               >
-                <t.icon size={18} className="shrink-0" />
-                {sidebarOpen && <span className="truncate">{t.label}</span>}
+                <span className="relative shrink-0">
+                  <t.icon size={18} />
+                  {!sidebarOpen && 'badge' in t && (t.badge ?? 0) > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent-rose" />
+                  )}
+                </span>
+                {sidebarOpen && <span className="truncate flex-1 text-left">{t.label}</span>}
+                {sidebarOpen && 'badge' in t && (t.badge ?? 0) > 0 && (
+                  <span
+                    className={`min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold inline-flex items-center justify-center tabular-nums ${
+                      active ? 'bg-cream-50 text-brown-300' : 'bg-accent-rose text-cream-50'
+                    }`}
+                    title="Təsdiq gözləyən rəylər"
+                  >
+                    {t.badge}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -330,6 +355,7 @@ function AdminDashboardInner() {
           {tab === 'stats' && <StatsDashboard />}
           {tab === 'products' && <ProductsAdmin products={products} categories={categories} onRefresh={fetchData} />}
           {tab === 'orders' && <OrdersAdmin />}
+          {tab === 'reviews' && <ReviewsAdmin onPendingChange={setPendingReviews} />}
           {tab === 'categories' && <CategoryManager onUpdate={fetchData} />}
           {tab === 'analysis' && <AnalysisAdmin products={products.map((p) => ({ id: p.id, name: p.name }))} />}
           {tab === 'leads' && <AnalysisLeadsAdmin />}

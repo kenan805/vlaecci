@@ -66,6 +66,8 @@ interface Review {
   hairType: string
   rating: number
   comment: string
+  images?: string[]
+  status?: 'pending' | 'approved' | 'rejected'
   isActive?: boolean
   createdAt?: string
 }
@@ -629,7 +631,7 @@ function ReviewFormModal({
 }) {
   const { toast } = useToast()
   const [authorName, setAuthorName] = useState(review?.authorName || '')
-  const [hairType, setHairType] = useState(review?.hairType || 'normal')
+  const [hairType, setHairType] = useState(review ? review.hairType : 'normal')
   const [rating, setRating] = useState(review?.rating?.toString() || '5')
   const [comment, setComment] = useState(review?.comment || '')
   const [loading, setLoading] = useState(false)
@@ -656,7 +658,6 @@ function ReviewFormModal({
             hairType,
             rating: Number(rating),
             comment,
-            isActive: review.isActive ?? true,
           }),
         })
         const data = await res.json()
@@ -695,7 +696,12 @@ function ReviewFormModal({
       <form id="review-form" onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Ad</label>
-          <input value={authorName} onChange={(e) => setAuthorName(e.target.value)} className={fieldClassName} required />
+          <input
+            value={authorName}
+            onChange={(e) => setAuthorName(e.target.value)}
+            placeholder="Boş qalsa “Anonim” göstərilir"
+            className={fieldClassName}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Saç tipi</label>
@@ -704,8 +710,8 @@ function ReviewFormModal({
             onChange={(e) => setHairType(e.target.value)}
             className={modernSelectClassName}
             style={selectChevronStyle}
-            required
           >
+            <option value="">Göstərilməsin</option>
             {HAIR_TYPES.map((h) => (
               <option key={h.value} value={h.value}>
                 {h.label}
@@ -730,7 +736,7 @@ function ReviewFormModal({
         </div>
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Rəy</label>
-          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className={fieldClassName} required />
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className={fieldClassName} />
         </div>
       </form>
     </AdminModal>
@@ -794,7 +800,11 @@ function ProductReviewsModal({
         }),
       })
       if (!res.ok) throw new Error('Xəta')
-      setReviews((prev) => prev.map((x) => (x.id === r.id ? { ...x, isActive: nextActive } : x)))
+      setReviews((prev) =>
+        prev.map((x) =>
+          x.id === r.id ? { ...x, isActive: nextActive, status: nextActive ? 'approved' : 'rejected' } : x
+        )
+      )
       toast(nextActive ? 'Rəy aktiv edildi' : 'Rəy deaktiv edildi')
       onRefresh()
     } catch {
@@ -807,7 +817,7 @@ function ProductReviewsModal({
   const filtered = reviews.filter((r) => {
     if (!search) return true
     const q = search.toLowerCase().trim()
-    return r.authorName.toLowerCase().includes(q) || r.comment.toLowerCase().includes(q)
+    return (r.authorName || 'Anonim').toLowerCase().includes(q) || r.comment.toLowerCase().includes(q)
   })
 
   return (
@@ -869,18 +879,38 @@ function ProductReviewsModal({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-brown-300 text-sm">{r.authorName}</span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200">
-                            {getHairTypeLabel(r.hairType)}
-                          </span>
-                          <StarRating rating={r.rating} />
-                          {!active && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-brown-100/10 text-brown-100/60">
-                              Deaktiv
+                          <span className="font-medium text-brown-300 text-sm">{r.authorName || 'Anonim'}</span>
+                          {r.hairType && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200">
+                              {getHairTypeLabel(r.hairType)}
                             </span>
                           )}
+                          <StarRating rating={r.rating} />
+                          {r.status === 'pending' ? (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              Gözləmədə
+                            </span>
+                          ) : (
+                            !active && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-brown-100/10 text-brown-100/60">
+                                Rədd edilib
+                              </span>
+                            )
+                          )}
                         </div>
-                        <p className="text-sm text-brown-100/90 mt-1.5 leading-relaxed whitespace-pre-line">{r.comment}</p>
+                        {r.comment && (
+                          <p className="text-sm text-brown-100/90 mt-1.5 leading-relaxed whitespace-pre-line">{r.comment}</p>
+                        )}
+                        {r.images && r.images.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {r.images.map((src) => (
+                              <a key={src} href={src} target="_blank" rel="noopener noreferrer" className="block">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt="" className="w-12 h-12 rounded-lg object-cover border border-sand-200/70" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         {r.createdAt && <p className="text-xs text-brown-100/50 mt-1.5">{formatDate(r.createdAt)}</p>}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">

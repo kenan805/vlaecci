@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
+import { mapReviewRow, recalcProductRating, REVIEW_COLUMNS, type ReviewRow } from '@/lib/reviews'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req)
@@ -9,29 +10,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const { id: productId } = await params
-    const result = await query<{
-      id: string
-      author_name: string
-      hair_type: string
-      rating: number
-      comment: string
-      is_active: boolean
-      created_at: string
-    }>(
-      `SELECT id, author_name, hair_type, rating, comment, is_active, created_at
-       FROM product_reviews WHERE product_id = $1 ORDER BY created_at DESC`,
+    const result = await query<ReviewRow>(
+      `SELECT ${REVIEW_COLUMNS}
+       FROM product_reviews r WHERE r.product_id = $1 ORDER BY r.created_at DESC`,
       [productId]
     )
 
-    const reviews = result.rows.map((r) => ({
-      id: r.id,
-      authorName: r.author_name,
-      hairType: r.hair_type,
-      rating: r.rating,
-      comment: r.comment,
-      isActive: r.is_active,
-      createdAt: r.created_at,
-    }))
+    const reviews = result.rows.map((r) => {
+      const review = mapReviewRow(r)
+      return { ...review, isActive: review.status === 'approved' }
+    })
 
     return NextResponse.json({ reviews })
   } catch (err) {
@@ -40,6 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+/** Admin-added reviews are published immediately. */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req)
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -47,18 +36,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id: productId } = await params
     const body = await req.json()
-    const { authorName, hairType, rating, comment } = body
+    const { authorName, hairType, comment } = body
+    const rating = Number(body.rating ?? 5)
 
-    if (!authorName || !hairType || !comment) {
-      return NextResponse.json({ error: 'Mütləq sahələr doldurulmalıdır' }, { status: 400 })
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      return NextResponse.json({ error: 'Reytinq 1-5 arası olmalıdır' }, { status: 400 })
     }
 
     const id = randomUUID()
     await query(
-      `INSERT INTO product_reviews (id, product_id, author_name, hair_type, rating, comment)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id, productId, authorName, hairType, rating || 5, comment]
+      `INSERT INTO product_reviews (id, product_id, author_name, hair_type, rating, comment, status, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, 'approved', true)`,
+      [
+        id,
+        productId,
+        typeof authorName === 'string' && authorName.trim() ? authorName.trim() : null,
+        typeof hairType === 'string' && hairType ? hairType : null,
+        rating,
+        typeof comment === 'string' && comment.trim() ? comment.trim() : null,
+      ]
     )
+    await recalcProductRating(productId)
 
     return NextResponse.json({ id }, { status: 201 })
   } catch (err) {

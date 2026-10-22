@@ -276,6 +276,36 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_before_after_products_product ON before_after_products(product_id);
   `)
 
+  // Customer-submitted reviews: name/comment/hair type become optional, reviews with text or
+  // photos wait for admin approval (status), and products cache the approved rating summary.
+  await db.query(`
+    ALTER TABLE product_reviews ALTER COLUMN author_name DROP NOT NULL;
+    ALTER TABLE product_reviews ALTER COLUMN hair_type DROP NOT NULL;
+    ALTER TABLE product_reviews ALTER COLUMN comment DROP NOT NULL;
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]';
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS ip_hash TEXT;
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS status TEXT;
+    UPDATE product_reviews
+      SET status = CASE WHEN COALESCE(is_active, true) THEN 'approved' ELSE 'rejected' END
+      WHERE status IS NULL;
+    ALTER TABLE product_reviews ALTER COLUMN status SET DEFAULT 'pending';
+    CREATE INDEX IF NOT EXISTS idx_product_reviews_product_status ON product_reviews(product_id, status);
+    CREATE INDEX IF NOT EXISTS idx_product_reviews_ip ON product_reviews(ip_hash, created_at);
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS rating_avg NUMERIC(3,2) DEFAULT 0;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0;
+    UPDATE products p SET
+      rating_count = COALESCE(s.cnt, 0),
+      rating_avg = COALESCE(s.avg, 0)
+    FROM (
+      SELECT pr.id, COUNT(r.id)::int AS cnt, ROUND(AVG(r.rating)::numeric, 2) AS avg
+      FROM products pr
+      LEFT JOIN product_reviews r ON r.product_id = pr.id AND r.status = 'approved'
+      GROUP BY pr.id
+    ) s
+    WHERE s.id = p.id;
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 

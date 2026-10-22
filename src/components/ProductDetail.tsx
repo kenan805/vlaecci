@@ -6,7 +6,6 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   ArrowDown,
-  Star,
   ChevronDown,
   ChevronUp,
   ShoppingBag,
@@ -17,10 +16,21 @@ import {
 import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
-import type { ProductDetail as ProductDetailType } from '@/lib/products'
+import type { ProductDetail as ProductDetailType, ProductReview } from '@/lib/products'
 import { formatMoney, variantDisplayName, variantImages } from '@/lib/variants'
 import { VariantSelector } from './VariantSelector'
 import { BeforeAfterSlider } from './BeforeAfterSlider'
+import { ProductRating, RatingStars } from './reviews/RatingStars'
+import { ReviewImages } from './reviews/ImageLightbox'
+import { ReviewForm } from './reviews/ReviewForm'
+
+/** dd.mm.yyyy in UTC — identical on server and client, so hydration matches. */
+function formatReviewDate(value: string) {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`
+}
 
 interface ProductDetailProps {
   product: ProductDetailType
@@ -58,6 +68,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
     setActiveImage(0)
   }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
+  const [reviews, setReviews] = useState<ProductReview[]>(product.reviews)
+  const [rating, setRating] = useState(product.rating)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const { add } = useCart()
@@ -85,10 +97,10 @@ export function ProductDetail({ product }: ProductDetailProps) {
   }, [product.slug])
 
   const filteredReviews = reviewFilter === 'all'
-    ? product.reviews
-    : product.reviews.filter((r) => r.hairType === reviewFilter)
+    ? reviews
+    : reviews.filter((r) => r.hairType === reviewFilter)
 
-  const hairTypesInReviews = Array.from(new Set(product.reviews.map((r) => r.hairType)))
+  const hairTypesInReviews = Array.from(new Set(reviews.map((r) => r.hairType).filter(Boolean)))
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -163,10 +175,15 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
         <div>
           <span className="text-sm text-accent-rose font-medium">{product.category?.name}</span>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-4">
+          <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-2">
             {product.name}
           </h1>
-          <p className="text-4xl font-medium text-brown-300 mb-6">{formatMoney(price)} ₼</p>
+          {rating?.count > 0 && (
+            <a href="#reyler" className="inline-flex mb-3 hover:opacity-80 transition-opacity">
+              <ProductRating rating={rating} size={18} />
+            </a>
+          )}
+          <p className="text-4xl font-medium text-brown-300 mb-6 mt-2">{formatMoney(price)} ₼</p>
           {product.variants?.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-brown-200 mb-2.5">
@@ -266,65 +283,83 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Section>
         )}
 
-        {product.reviews.length > 0 && (
-          <div className="py-8">
-            <h2 className="font-serif text-2xl font-medium text-brown-300 mb-6">Müştəri rəyləri</h2>
-
-            {hairTypesInReviews.length > 1 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setReviewFilter('all')}
-                  className={`px-3 py-1.5 rounded-full text-sm ${
-                    reviewFilter === 'all' ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
-                  }`}
-                >
-                  Hamısı
-                </button>
-                {hairTypesInReviews.map((ht) => {
-                  const label = product.reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht
-                  return (
-                    <button
-                      key={ht}
-                      type="button"
-                      onClick={() => setReviewFilter(ht)}
-                      className={`px-3 py-1.5 rounded-full text-sm ${
-                        reviewFilter === ht ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {filteredReviews.map((review) => (
-                <div key={review.id} className="p-5 bg-cream-100 rounded-2xl border border-sand-200/50">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <span className="font-medium text-brown-300">{review.authorName}</span>
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-accent-sage/20 text-brown-100">
-                        {review.hairTypeLabel}
-                      </span>
-                    </div>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          className={i < review.rating ? 'fill-accent-rose text-accent-rose' : 'text-sand-300'}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-brown-100/90 text-sm leading-relaxed">{review.comment}</p>
-                </div>
-              ))}
-            </div>
+        <section id="reyler" className="py-8 scroll-mt-28">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-6">
+            <h2 className="font-serif text-2xl font-medium text-brown-300">Müştəri rəyləri</h2>
+            <ProductRating rating={rating} size={18} />
           </div>
-        )}
+
+          {reviews.length > 0 && (
+            <>
+              {hairTypesInReviews.length > 1 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setReviewFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-sm ${
+                      reviewFilter === 'all' ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
+                    }`}
+                  >
+                    Hamısı
+                  </button>
+                  {hairTypesInReviews.map((ht) => {
+                    const label = reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht
+                    return (
+                      <button
+                        key={ht}
+                        type="button"
+                        onClick={() => setReviewFilter(ht)}
+                        className={`px-3 py-1.5 rounded-full text-sm ${
+                          reviewFilter === ht ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="space-y-4 mb-8">
+                {filteredReviews.map((review) => (
+                  <article key={review.id} className="p-5 bg-cream-100 rounded-2xl border border-sand-200/50">
+                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 mb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-brown-300">{review.authorName || 'Anonim'}</span>
+                        {review.hairTypeLabel && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-accent-sage/20 text-brown-100">
+                            {review.hairTypeLabel}
+                          </span>
+                        )}
+                      </div>
+                      <time dateTime={review.createdAt} className="text-xs text-brown-100/60">
+                        {formatReviewDate(review.createdAt)}
+                      </time>
+                    </div>
+                    <span className="sr-only">{review.rating} / 5</span>
+                    <RatingStars value={review.rating} size={14} />
+                    {review.comment && (
+                      <p className="mt-2 text-brown-100/90 text-sm leading-relaxed whitespace-pre-line">{review.comment}</p>
+                    )}
+                    {review.images.length > 0 && (
+                      <div className="mt-3">
+                        <ReviewImages images={review.images} />
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+
+          <ReviewForm
+            productSlug={product.slug}
+            onPublished={(review, next) => {
+              setReviews((cur) => [review, ...cur])
+              setRating(next)
+            }}
+          />
+        </section>
       </div>
     </div>
   )
