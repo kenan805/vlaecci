@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import { query } from './db'
 import { sanitizeImageUrls } from './parse-image-urls'
 import { mapReviewRow, REVIEW_COLUMNS, type ReviewRow } from './reviews'
+import { sortReviewsForDisplay } from './review-order'
 import { isVariantUnit, type ProductVariant, type VariantUnit } from './variants'
 import { listResults, type BeforeAfterResult } from './home-content'
 
@@ -52,7 +53,7 @@ export interface ProductDetail {
   variantImages: boolean
   /** Active before/after results linked to this product. */
   beforeAfter: BeforeAfterResult[]
-  /** Approved reviews only, newest first. */
+  /** Approved reviews only, in product page order (see sortReviewsForDisplay). */
   reviews: ProductReview[]
   rating: ProductRating
 }
@@ -90,8 +91,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
   const reviewsResult = await query<ReviewRow>(
     `SELECT ${REVIEW_COLUMNS}
      FROM product_reviews r
-     WHERE r.product_id = $1 AND r.status = 'approved'
-     ORDER BY r.created_at DESC`,
+     WHERE r.product_id = $1 AND r.status = 'approved'`,
     [row.id]
   )
 
@@ -108,10 +108,12 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     variants,
     variantImages: row.variant_images ?? false,
     beforeAfter,
-    reviews: reviewsResult.rows.map((r) => {
-      const { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt } = mapReviewRow(r)
-      return { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt }
-    }),
+    reviews: sortReviewsForDisplay(
+      reviewsResult.rows.map((r) => {
+        const { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt } = mapReviewRow(r)
+        return { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt }
+      })
+    ),
     rating: toRating(row.rating_avg, row.rating_count),
   }
 }

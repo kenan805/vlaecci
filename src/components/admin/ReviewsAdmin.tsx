@@ -1,12 +1,20 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, ExternalLink, MessageSquare, Trash2, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, ExternalLink, MessageSquare, Trash2, X } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { useToast } from './Toast'
 import { ConfirmModal } from './ConfirmModal'
-import { PageHeader, SearchInput, IconButton, Card, EmptyState } from './ui'
+import {
+  PageHeader,
+  SearchInput,
+  IconButton,
+  Card,
+  EmptyState,
+  modernSelectClassName,
+  selectChevronStyle,
+} from './ui'
 import { RatingStars } from '../reviews/RatingStars'
 import { ReviewImages } from '../reviews/ImageLightbox'
 
@@ -37,6 +45,18 @@ const STATUS_STYLES: Record<ReviewStatus, string> = {
 }
 
 const FILTERS: Filter[] = ['pending', 'approved', 'rejected', 'all']
+const PAGE_SIZES = [10, 20, 50]
+
+/** Up to 5 page buttons centred on the current page. */
+function visiblePages(page: number, totalPages: number) {
+  const maxButtons = 5
+  let start = Math.max(1, page - Math.floor(maxButtons / 2))
+  const end = Math.min(totalPages, start + maxButtons - 1)
+  start = Math.max(1, end - maxButtons + 1)
+  const pages: number[] = []
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
+}
 
 function formatDate(value: string) {
   const d = new Date(value)
@@ -51,15 +71,41 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
   const [counts, setCounts] = useState<Record<ReviewStatus, number>>({ pending: 0, approved: 0, rejected: 0 })
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZES[0])
+  const [total, setTotal] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminReview | null>(null)
+
+  // Search runs on the server; wait until typing pauses.
+  useEffect(() => {
+    const next = search.trim()
+    if (next === query) return
+    const t = window.setTimeout(() => {
+      setQuery(next)
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(t)
+  }, [search, query])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await apiFetch(`/admin/reviews${filter === 'all' ? '' : `?status=${filter}`}`)
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+      if (filter !== 'all') params.set('status', filter)
+      if (query) params.set('q', query)
+      const res = await apiFetch(`/admin/reviews?${params}`)
       const data = await res.json()
+      const nextTotal: number = data.total ?? 0
+      // The last item of the last page was approved / rejected / deleted: step back a page.
+      const lastPage = Math.max(1, Math.ceil(nextTotal / pageSize))
+      if (page > lastPage) {
+        setPage(lastPage)
+        return
+      }
       setReviews(data.reviews || [])
+      setTotal(nextTotal)
       if (data.counts) {
         setCounts(data.counts)
         onPendingChange?.(data.counts.pending)
@@ -69,11 +115,15 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
     } finally {
       setLoading(false)
     }
-  }, [filter, toast, onPendingChange])
+  }, [filter, query, page, pageSize, toast, onPendingChange])
 
   useEffect(() => {
     load()
   }, [load])
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, total)
 
   const setStatus = async (r: AdminReview, status: ReviewStatus) => {
     setBusyId(r.id)
@@ -109,18 +159,7 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
     }
   }
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    if (!q) return reviews
-    return reviews.filter(
-      (r) =>
-        (r.authorName || 'Anonim').toLowerCase().includes(q) ||
-        r.comment.toLowerCase().includes(q) ||
-        r.product.name.toLowerCase().includes(q)
-    )
-  }, [reviews, search])
-
-  const total = counts.pending + counts.approved + counts.rejected
+  const statusTotal = counts.pending + counts.approved + counts.rejected
 
   return (
     <div>
@@ -141,7 +180,10 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
             <button
               key={f}
               type="button"
-              onClick={() => setFilter(f)}
+              onClick={() => {
+                setFilter(f)
+                setPage(1)
+              }}
               className={`px-3 h-9 rounded-xl text-sm font-medium transition-colors ${
                 filter === f
                   ? 'bg-brown-300 text-cream-50'
@@ -149,23 +191,23 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
               }`}
             >
               {f === 'all' ? 'Hamısı' : STATUS_LABELS[f]}
-              <span className="ml-1.5 opacity-60 tabular-nums">{f === 'all' ? total : counts[f]}</span>
+              <span className="ml-1.5 opacity-60 tabular-nums">{f === 'all' ? statusTotal : counts[f]}</span>
             </button>
           ))}
         </div>
       </div>
 
       <Card>
-        {loading ? (
+        {loading && reviews.length === 0 ? (
           <p className="text-sm text-brown-100/60 py-12 text-center">Yüklənir...</p>
-        ) : filtered.length === 0 ? (
+        ) : reviews.length === 0 ? (
           <EmptyState
             icon={<MessageSquare size={24} />}
-            title={filter === 'pending' && !search ? 'Təsdiq gözləyən rəy yoxdur' : 'Rəy tapılmadı'}
+            title={filter === 'pending' && !query ? 'Təsdiq gözləyən rəy yoxdur' : 'Rəy tapılmadı'}
           />
         ) : (
-          <ul className="divide-y divide-sand-200/50">
-            {filtered.map((r) => (
+          <ul className={`divide-y divide-sand-200/50 transition-opacity ${loading ? 'opacity-60' : ''}`}>
+            {reviews.map((r) => (
               <li key={r.id} className="p-4 sm:p-5">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="min-w-0 flex-1">
@@ -237,6 +279,71 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
               </li>
             ))}
           </ul>
+        )}
+
+        {total > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-t border-sand-200/60 bg-cream-50/60 rounded-b-2xl">
+            <div className="flex items-center gap-3 text-sm text-brown-100">
+              <span className="text-brown-100/70">Səhifədə:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setPage(1)
+                }}
+                className={`${modernSelectClassName} !w-auto !h-9 !py-1 !pl-3 !pr-8`}
+                style={selectChevronStyle}
+                aria-label="Səhifə ölçüsü"
+              >
+                {PAGE_SIZES.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+              <span className="text-brown-100/70 tabular-nums">
+                {from}–{to} / {total}
+              </span>
+            </div>
+
+            {totalPages > 1 && (
+              <nav className="flex items-center gap-1" aria-label="Səhifələr">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                  className="inline-flex items-center gap-1 px-3 h-9 rounded-lg text-sm text-brown-100 border border-sand-200/70 bg-white hover:bg-sand-200/40 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                  <span className="hidden sm:inline">Əvvəl</span>
+                </button>
+                {visiblePages(page, totalPages).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPage(n)}
+                    aria-current={n === page ? 'page' : undefined}
+                    className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
+                      n === page
+                        ? 'bg-brown-300 text-cream-50 shadow-sm'
+                        : 'text-brown-100 border border-sand-200/70 bg-white hover:bg-sand-200/40'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                  className="inline-flex items-center gap-1 px-3 h-9 rounded-lg text-sm text-brown-100 border border-sand-200/70 bg-white hover:bg-sand-200/40 disabled:opacity-40 disabled:pointer-events-none transition-colors"
+                >
+                  <span className="hidden sm:inline">Sonra</span>
+                  <ChevronRight size={16} />
+                </button>
+              </nav>
+            )}
+          </div>
         )}
       </Card>
 

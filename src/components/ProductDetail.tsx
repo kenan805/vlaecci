@@ -23,6 +23,7 @@ import { BeforeAfterSlider } from './BeforeAfterSlider'
 import { ProductRating, RatingStars } from './reviews/RatingStars'
 import { ReviewImages } from './reviews/ImageLightbox'
 import { ReviewForm } from './reviews/ReviewForm'
+import { INITIAL_VISIBLE_REVIEWS, sortReviewsForDisplay } from '@/lib/review-order'
 
 /** dd.mm.yyyy in UTC — identical on server and client, so hydration matches. */
 function formatReviewDate(value: string) {
@@ -68,6 +69,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
     setActiveImage(0)
   }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
+  const [showAllReviews, setShowAllReviews] = useState(false)
   const [reviews, setReviews] = useState<ProductReview[]>(product.reviews)
   const [rating, setRating] = useState(product.rating)
   const [qty, setQty] = useState(1)
@@ -99,6 +101,13 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const filteredReviews = reviewFilter === 'all'
     ? reviews
     : reviews.filter((r) => r.hairType === reviewFilter)
+  const visibleReviews = showAllReviews ? filteredReviews : filteredReviews.slice(0, INITIAL_VISIBLE_REVIEWS)
+  const hiddenReviewCount = filteredReviews.length - visibleReviews.length
+
+  const changeReviewFilter = (value: string) => {
+    setReviewFilter(value)
+    setShowAllReviews(false)
+  }
 
   const hairTypesInReviews = Array.from(new Set(reviews.map((r) => r.hairType).filter(Boolean)))
 
@@ -295,7 +304,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 <div className="flex flex-wrap gap-2 mb-6">
                   <button
                     type="button"
-                    onClick={() => setReviewFilter('all')}
+                    onClick={() => changeReviewFilter('all')}
                     className={`px-3 py-1.5 rounded-full text-sm ${
                       reviewFilter === 'all' ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
                     }`}
@@ -308,7 +317,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
                       <button
                         key={ht}
                         type="button"
-                        onClick={() => setReviewFilter(ht)}
+                        onClick={() => changeReviewFilter(ht)}
                         className={`px-3 py-1.5 rounded-full text-sm ${
                           reviewFilter === ht ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
                         }`}
@@ -320,8 +329,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 </div>
               )}
 
-              <div className="space-y-4 mb-8">
-                {filteredReviews.map((review) => (
+              <div className="space-y-4">
+                {visibleReviews.map((review) => (
                   <article key={review.id} className="p-5 bg-cream-100 rounded-2xl border border-sand-200/50">
                     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 mb-2">
                       <div className="flex flex-wrap items-center gap-2">
@@ -349,13 +358,25 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   </article>
                 ))}
               </div>
+              {hiddenReviewCount > 0 && (
+                <div className="mt-5 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllReviews(true)}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-sand-300 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                  >
+                    Daha çox göstər ({hiddenReviewCount})
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+              )}
             </>
           )}
 
           <ReviewForm
             productSlug={product.slug}
             onPublished={(review, next) => {
-              setReviews((cur) => [review, ...cur])
+              setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
               setRating(next)
             }}
           />

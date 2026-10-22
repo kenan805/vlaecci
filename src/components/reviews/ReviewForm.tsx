@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Star, ImagePlus, X, CheckCircle2 } from 'lucide-react'
+import { Star, ImagePlus, X, CheckCircle2, PenLine } from 'lucide-react'
 import { buildApiUrl } from '@/lib/api'
 import { compressImageFile } from '@/lib/compress-image'
 import type { ProductRating, ProductReview } from '@/lib/products'
@@ -27,6 +27,7 @@ export function ReviewForm({
   onPublished?: (review: ProductReview, rating: ProductRating) => void
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [open, setOpen] = useState(false)
   const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
   const [comment, setComment] = useState('')
@@ -130,7 +131,10 @@ export function ReviewForm({
           )}
           <button
             type="button"
-            onClick={() => setResult(null)}
+            onClick={() => {
+              setResult(null)
+              setOpen(true)
+            }}
             className="mt-3 text-sm text-accent-rose hover:underline"
           >
             Yeni rəy yaz
@@ -140,11 +144,45 @@ export function ReviewForm({
     )
   }
 
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-expanded={false}
+        aria-controls="review-form"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brown-300 text-cream-50 font-medium hover:bg-brown-400 transition-colors"
+      >
+        <PenLine size={18} />
+        Rəy yaz
+      </button>
+    )
+  }
+
   const shown = hover || rating
 
   return (
-    <form onSubmit={handleSubmit} className="relative rounded-2xl border border-sand-200/60 bg-cream-100 p-5 space-y-4" noValidate>
-      <h3 className="font-serif text-xl font-medium text-brown-300">Rəy yaz</h3>
+    <form
+      id="review-form"
+      onSubmit={handleSubmit}
+      className="relative rounded-2xl border border-sand-200/60 bg-cream-100 p-5 space-y-4"
+      noValidate
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-serif text-xl font-medium text-brown-300">Rəy yaz</h3>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            setError('')
+          }}
+          className="p-1.5 rounded-lg text-brown-100 hover:bg-sand-200/60 hover:text-brown-300 transition-colors"
+          aria-label="Formu bağla"
+          title="Bağla"
+        >
+          <X size={18} />
+        </button>
+      </div>
 
       <div>
         <p className="text-sm font-medium text-brown-200 mb-1.5">
