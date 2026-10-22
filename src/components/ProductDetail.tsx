@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   ArrowLeft,
   ArrowDown,
+  PenLine,
   ChevronDown,
   ChevronUp,
   ShoppingBag,
@@ -35,6 +36,8 @@ function formatReviewDate(value: string) {
 
 interface ProductDetailProps {
   product: ProductDetailType
+  /** Active hair types offered on the review form. */
+  hairTypes: { id: string; label: string }[]
 }
 
 function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
@@ -54,7 +57,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   )
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [variantId, setVariantId] = useState<string | null>(product.variants?.[0]?.id ?? null)
   const variant = product.variants?.find((v) => v.id === variantId) ?? null
@@ -70,6 +73,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
   }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
   const [showAllReviews, setShowAllReviews] = useState(false)
+  const [reviewFormOpen, setReviewFormOpen] = useState(false)
   const [reviews, setReviews] = useState<ProductReview[]>(product.reviews)
   const [rating, setRating] = useState(product.rating)
   const [qty, setQty] = useState(1)
@@ -292,94 +296,139 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Section>
         )}
 
-        <section id="reyler" className="py-8 scroll-mt-28">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-6">
-            <h2 className="font-serif text-2xl font-medium text-brown-300">Müştəri rəyləri</h2>
-            <ProductRating rating={rating} size={18} />
+        <section id="reyler" className="mt-6 border-t border-sand-200/60 pt-10 pb-4 scroll-mt-28">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="font-serif text-2xl md:text-3xl font-medium text-brown-300">Müştəri rəyləri</h2>
+              {rating.count > 0 ? (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="font-serif text-4xl leading-none text-brown-300 tabular-nums">
+                    {rating.average.toFixed(1).replace('.', ',')}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <RatingStars value={rating.average} size={18} />
+                    <span className="text-xs text-brown-100/70">{rating.count} rəy əsasında</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-brown-100/70">Hələ rəy yoxdur. İlk rəyi siz yazın.</p>
+              )}
+            </div>
+            {!reviewFormOpen && (
+              <button
+                type="button"
+                onClick={() => setReviewFormOpen(true)}
+                aria-controls="review-form"
+                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-brown-300 px-6 text-sm font-medium text-cream-50 shadow-sm hover:bg-brown-400 transition-colors sm:self-auto"
+              >
+                <PenLine size={17} />
+                Rəy yaz
+              </button>
+            )}
           </div>
 
+          {reviewFormOpen && (
+            <div className="mt-8">
+              <ReviewForm
+                productSlug={product.slug}
+                hairTypes={hairTypes}
+                onClose={() => setReviewFormOpen(false)}
+                onPublished={(review, next) => {
+                  setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
+                  setRating(next)
+                }}
+              />
+            </div>
+          )}
+
           {reviews.length > 0 && (
-            <>
+            <div className="mt-8">
               {hairTypesInReviews.length > 1 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <button
-                    type="button"
-                    onClick={() => changeReviewFilter('all')}
-                    className={`px-3 py-1.5 rounded-full text-sm ${
-                      reviewFilter === 'all' ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
-                    }`}
-                  >
-                    Hamısı
-                  </button>
-                  {hairTypesInReviews.map((ht) => {
-                    const label = reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht
-                    return (
-                      <button
-                        key={ht}
-                        type="button"
-                        onClick={() => changeReviewFilter(ht)}
-                        className={`px-3 py-1.5 rounded-full text-sm ${
-                          reviewFilter === ht ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {[{ value: 'all', label: 'Hamısı' }, ...hairTypesInReviews.map((ht) => ({
+                    value: ht,
+                    label: reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht,
+                  }))].map((f) => (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => changeReviewFilter(f.value)}
+                      className={`h-9 rounded-full px-4 text-sm transition-colors ${
+                        reviewFilter === f.value
+                          ? 'bg-brown-300 text-cream-50'
+                          : 'border border-sand-200 bg-cream-50 text-brown-100 hover:border-sand-300 hover:text-brown-300'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
                 </div>
               )}
 
               <div className="space-y-4">
-                {visibleReviews.map((review) => (
-                  <article key={review.id} className="p-5 bg-cream-100 rounded-2xl border border-sand-200/50">
-                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 mb-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-brown-300">{review.authorName || 'Anonim'}</span>
-                        {review.hairTypeLabel && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-accent-sage/20 text-brown-100">
-                            {review.hairTypeLabel}
-                          </span>
-                        )}
+                {visibleReviews.map((review) => {
+                  const name = review.authorName || 'Anonim'
+                  return (
+                    <article
+                      key={review.id}
+                      className="rounded-2xl border border-sand-200/60 bg-cream-50 p-5 sm:p-6"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          aria-hidden
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sand-200/70 text-sm font-semibold text-brown-200"
+                        >
+                          {name.charAt(0).toLocaleUpperCase('az')}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-brown-300">{name}</span>
+                              {review.hairTypeLabel && (
+                                <span className="rounded-full bg-accent-sage/15 px-2.5 py-0.5 text-xs text-brown-200">
+                                  {review.hairTypeLabel}
+                                </span>
+                              )}
+                            </div>
+                            <time dateTime={review.createdAt} className="text-xs text-brown-100/60">
+                              {formatReviewDate(review.createdAt)}
+                            </time>
+                          </div>
+                          <div className="mt-1">
+                            <span className="sr-only">{review.rating} / 5</span>
+                            <RatingStars value={review.rating} size={14} />
+                          </div>
+                          {review.comment && (
+                            <p className="mt-3 text-[15px] leading-relaxed text-brown-100/90 whitespace-pre-line">
+                              {review.comment}
+                            </p>
+                          )}
+                          {review.images.length > 0 && (
+                            <div className="mt-4">
+                              <ReviewImages images={review.images} />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <time dateTime={review.createdAt} className="text-xs text-brown-100/60">
-                        {formatReviewDate(review.createdAt)}
-                      </time>
-                    </div>
-                    <span className="sr-only">{review.rating} / 5</span>
-                    <RatingStars value={review.rating} size={14} />
-                    {review.comment && (
-                      <p className="mt-2 text-brown-100/90 text-sm leading-relaxed whitespace-pre-line">{review.comment}</p>
-                    )}
-                    {review.images.length > 0 && (
-                      <div className="mt-3">
-                        <ReviewImages images={review.images} />
-                      </div>
-                    )}
-                  </article>
-                ))}
+                    </article>
+                  )
+                })}
               </div>
+
               {hiddenReviewCount > 0 && (
-                <div className="mt-5 text-center">
+                <div className="mt-6 flex justify-center">
                   <button
                     type="button"
                     onClick={() => setShowAllReviews(true)}
-                    className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full border border-sand-300 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                    className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
                   >
                     Daha çox göstər ({hiddenReviewCount})
                     <ChevronDown size={16} />
                   </button>
                 </div>
               )}
-            </>
+            </div>
           )}
-
-          <ReviewForm
-            productSlug={product.slug}
-            onPublished={(review, next) => {
-              setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
-              setRating(next)
-            }}
-          />
         </section>
       </div>
     </div>

@@ -4,7 +4,6 @@ import path from 'path'
 import { del } from '@vercel/blob'
 import { query } from './db'
 import { uploadProductImage } from './blob-upload'
-import { getHairTypeLabel } from './constants'
 import { sanitizeImageUrls } from './parse-image-urls'
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
@@ -197,6 +196,7 @@ export interface ReviewRow {
   product_id: string
   author_name: string | null
   hair_type: string | null
+  hair_type_label: string | null
   rating: number
   comment: string | null
   images: unknown
@@ -205,7 +205,10 @@ export interface ReviewRow {
 }
 
 export const REVIEW_COLUMNS =
-  'r.id, r.product_id, r.author_name, r.hair_type, r.rating, r.comment, r.images, r.status, r.created_at'
+  'r.id, r.product_id, r.author_name, r.hair_type, ht.label AS hair_type_label, r.rating, r.comment, r.images, r.status, r.created_at'
+
+/** FROM clause matching REVIEW_COLUMNS (resolves hair type ids to their current names). */
+export const REVIEW_FROM = 'product_reviews r LEFT JOIN hair_types ht ON ht.id = r.hair_type'
 
 export function mapReviewRow(r: ReviewRow) {
   return {
@@ -213,7 +216,8 @@ export function mapReviewRow(r: ReviewRow) {
     productId: r.product_id,
     authorName: r.author_name || '',
     hairType: r.hair_type || '',
-    hairTypeLabel: r.hair_type ? getHairTypeLabel(r.hair_type) : '',
+    // A hair type from the list resolves to its name; a customer's own wording is shown as typed.
+    hairTypeLabel: r.hair_type_label || r.hair_type || '',
     rating: r.rating,
     comment: r.comment || '',
     images: sanitizeImageUrls(r.images),

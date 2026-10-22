@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
-import { isReviewStatus, mapReviewRow, REVIEW_COLUMNS, type ReviewRow } from '@/lib/reviews'
+import { isReviewStatus, mapReviewRow, REVIEW_COLUMNS, REVIEW_FROM, type ReviewRow } from '@/lib/reviews'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const [list, totalResult, counts] = await Promise.all([
       query<ReviewRow & { product_name: string | null; product_slug: string | null }>(
         `SELECT ${REVIEW_COLUMNS}, p.name AS product_name, p.slug AS product_slug
-         FROM product_reviews r
+         FROM ${REVIEW_FROM}
          LEFT JOIN products p ON p.id = r.product_id
          ${whereSql}
          ORDER BY r.created_at DESC, r.id

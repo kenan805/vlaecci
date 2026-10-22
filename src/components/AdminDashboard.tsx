@@ -272,7 +272,7 @@ function AdminDashboardInner() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="relative z-30 h-14 shrink-0 bg-cream-100/80 backdrop-blur border-b border-sand-200/70 px-4 sm:px-6 flex items-center justify-end gap-2.5">
+        <header className="relative z-30 h-14 shrink-0 bg-cream-100 border-b border-sand-200/70 px-4 sm:px-6 flex items-center justify-end gap-2.5">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
           {/* User menu */}

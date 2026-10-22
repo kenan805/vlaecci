@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { query } from './db'
 import { sanitizeImageUrls } from './parse-image-urls'
-import { mapReviewRow, REVIEW_COLUMNS, type ReviewRow } from './reviews'
+import { mapReviewRow, REVIEW_COLUMNS, REVIEW_FROM, type ReviewRow } from './reviews'
 import { sortReviewsForDisplay } from './review-order'
 import { isVariantUnit, type ProductVariant, type VariantUnit } from './variants'
 import { listResults, type BeforeAfterResult } from './home-content'
@@ -90,7 +90,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
 
   const reviewsResult = await query<ReviewRow>(
     `SELECT ${REVIEW_COLUMNS}
-     FROM product_reviews r
+     FROM ${REVIEW_FROM}
      WHERE r.product_id = $1 AND r.status = 'approved'`,
     [row.id]
   )

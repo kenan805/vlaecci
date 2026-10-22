@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { toRating, type ProductReview } from '@/lib/products'
+import { HAIR_TYPE_LABEL_MAX } from '@/lib/hair-types'
 import {
   checkReviewRateLimit,
   hashIp,
@@ -22,8 +23,9 @@ function getClientIp(req: NextRequest): string {
 }
 
 /**
- * Public: submit a review (multipart form). Star-only reviews are approved immediately;
- * reviews with text or photos wait for admin approval.
+ * Public: submit a review (multipart form). Star-only reviews (optionally with a hair type from
+ * the list) are approved immediately; reviews with text, photos or a custom hair type wait for
+ * admin approval.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
@@ -50,6 +52,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
     const { rating, comment, authorName } = parsed.input
 
+    // Hair type (optional): an active type from the list, or the customer's own wording.
+    const hairTypeId = typeof form.get('hairType') === 'string' ? String(form.get('hairType')) : ''
+    const hairTypeCustom =
+      typeof form.get('hairTypeCustom') === 'string' ? String(form.get('hairTypeCustom')).trim().replace(/\s+/g, ' ') : ''
+    let hairType: string | null = null
+    let hairTypeLabel = ''
+    if (hairTypeCustom) {
+      if (hairTypeCustom.length > HAIR_TYPE_LABEL_MAX) {
+        return NextResponse.json({ error: `Saç tipi ən çox ${HAIR_TYPE_LABEL_MAX} simvol ola bilər` }, { status: 400 })
+      }
+      hairType = hairTypeLabel = hairTypeCustom
+    } else if (hairTypeId) {
+      const found = await query<{ label: string }>(
+        'SELECT label FROM hair_types WHERE id = $1 AND COALESCE(is_active, true) = true',
+        [hairTypeId]
+      )
+      if (!found.rows[0]) return NextResponse.json({ error: 'Saç tipi tapılmadı' }, { status: 400 })
+      hairType = hairTypeId
+      hairTypeLabel = found.rows[0].label
+    }
+
     const product = await query<{ id: string }>(
       `SELECT id FROM products WHERE slug = $1 AND COALESCE(status, 'active') = 'active'`,
       [slug]
@@ -66,13 +89,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     if ('error' in validated) return NextResponse.json({ error: validated.error }, { status: 400 })
 
     const images = await storeReviewImages(validated.images)
-    const status = comment || images.length > 0 ? 'pending' : 'approved'
+    // Anything the customer typed or uploaded (incl. their own hair type wording) is moderated first.
+    const status = comment || images.length > 0 || hairTypeCustom ? 'pending' : 'approved'
 
     const id = randomUUID()
     const created = await query<{ created_at: string }>(
       `INSERT INTO product_reviews
          (id, product_id, author_name, hair_type, rating, comment, images, status, is_active, ip_hash)
-       VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, $3, $10, $4, $5, $6, $7, $8, $9)
        RETURNING created_at`,
       [
         id,
@@ -84,6 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
         status,
         status === 'approved',
         ipHash,
+        hairType,
       ]
     )
 
@@ -98,8 +123,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     const review: ProductReview = {
       id,
       authorName,
-      hairType: '',
-      hairTypeLabel: '',
+      hairType: hairType ?? '',
+      hairTypeLabel,
       rating,
       comment: '',
       images: [],

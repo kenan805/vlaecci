@@ -1,4 +1,5 @@
 import { Pool, type QueryResultRow } from 'pg'
+import { HAIR_TYPES } from './constants'
 
 let pool: Pool | null = null
 let schemaReady: Promise<void> | null = null
@@ -305,6 +306,29 @@ async function initSchema() {
     ) s
     WHERE s.id = p.id;
   `)
+
+  // Hair types offered on review forms, managed from the admin panel. Seeded with the built-in
+  // list only when the table is first created, so types the admin deletes don't come back.
+  const hairTypesExisted = await db.query<{ exists: boolean }>(
+    `SELECT to_regclass('public.hair_types') IS NOT NULL AS exists`
+  )
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS hair_types (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `)
+  if (!hairTypesExisted.rows[0]?.exists) {
+    for (let i = 0; i < HAIR_TYPES.length; i++) {
+      await db.query(
+        'INSERT INTO hair_types (id, label, sort_order) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
+        [HAIR_TYPES[i].value, HAIR_TYPES[i].label, i]
+      )
+    }
+  }
 
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }

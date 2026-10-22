@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { query } from '@/lib/db'
 import { requireAdmin } from '@/lib/admin-guard'
-import { mapReviewRow, recalcProductRating, REVIEW_COLUMNS, type ReviewRow } from '@/lib/reviews'
+import { mapReviewRow, recalcProductRating, REVIEW_COLUMNS, REVIEW_FROM, type ReviewRow } from '@/lib/reviews'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req)
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id: productId } = await params
     const result = await query<ReviewRow>(
       `SELECT ${REVIEW_COLUMNS}
-       FROM product_reviews r WHERE r.product_id = $1 ORDER BY r.created_at DESC`,
+       FROM ${REVIEW_FROM} WHERE r.product_id = $1 ORDER BY r.created_at DESC`,
       [productId]
     )
 

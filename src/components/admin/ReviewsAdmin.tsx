@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, ChevronLeft, ChevronRight, ExternalLink, MessageSquare, Trash2, X } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, ExternalLink, MessageSquare, Sparkles, Trash2, X } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import { useToast } from './Toast'
 import { ConfirmModal } from './ConfirmModal'
@@ -17,6 +17,7 @@ import {
 } from './ui'
 import { RatingStars } from '../reviews/RatingStars'
 import { ReviewImages } from '../reviews/ImageLightbox'
+import { HairTypesManager } from './HairTypesManager'
 
 type ReviewStatus = 'pending' | 'approved' | 'rejected'
 type Filter = ReviewStatus | 'all'
@@ -24,6 +25,7 @@ type Filter = ReviewStatus | 'all'
 interface AdminReview {
   id: string
   authorName: string
+  hairTypeLabel: string
   rating: number
   comment: string
   images: string[]
@@ -77,6 +79,7 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
   const [total, setTotal] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminReview | null>(null)
+  const [hairTypesOpen, setHairTypesOpen] = useState(false)
 
   // Search runs on the server; wait until typing pauses.
   useEffect(() => {
@@ -166,6 +169,16 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
       <PageHeader
         title="Məhsul rəyləri"
         subtitle="Mətn və ya şəkil olan rəylər təsdiqdən sonra saytda görünür. Yalnız ulduz olan rəylər avtomatik təsdiqlənir."
+        action={
+          <button
+            type="button"
+            onClick={() => setHairTypesOpen(true)}
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-sand-200/70 bg-white text-sm font-medium text-brown-200 hover:bg-sand-200/40 hover:text-brown-300 transition-colors"
+          >
+            <Sparkles size={16} />
+            Saç tipləri
+          </button>
+        }
       />
 
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
@@ -213,6 +226,11 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-brown-300">{r.authorName || 'Anonim'}</span>
+                      {r.hairTypeLabel && (
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200">
+                          {r.hairTypeLabel}
+                        </span>
+                      )}
                       <RatingStars value={r.rating} size={14} />
                       <span
                         className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status]}`}
@@ -346,6 +364,8 @@ export function ReviewsAdmin({ onPendingChange }: { onPendingChange?: (count: nu
           </div>
         )}
       </Card>
+
+      {hairTypesOpen && <HairTypesManager onClose={() => setHairTypesOpen(false)} />}
 
       <ConfirmModal
         open={deleteTarget !== null}
