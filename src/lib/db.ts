@@ -1,4 +1,5 @@
 import { Pool, type QueryResultRow } from 'pg'
+import { HAIR_TYPES } from './constants'
 
 let pool: Pool | null = null
 let schemaReady: Promise<void> | null = null
@@ -275,6 +276,59 @@ async function initSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_before_after_products_product ON before_after_products(product_id);
   `)
+
+  // Customer-submitted reviews: name/comment/hair type become optional, reviews with text or
+  // photos wait for admin approval (status), and products cache the approved rating summary.
+  await db.query(`
+    ALTER TABLE product_reviews ALTER COLUMN author_name DROP NOT NULL;
+    ALTER TABLE product_reviews ALTER COLUMN hair_type DROP NOT NULL;
+    ALTER TABLE product_reviews ALTER COLUMN comment DROP NOT NULL;
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]';
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS ip_hash TEXT;
+    ALTER TABLE product_reviews ADD COLUMN IF NOT EXISTS status TEXT;
+    UPDATE product_reviews
+      SET status = CASE WHEN COALESCE(is_active, true) THEN 'approved' ELSE 'rejected' END
+      WHERE status IS NULL;
+    ALTER TABLE product_reviews ALTER COLUMN status SET DEFAULT 'pending';
+    CREATE INDEX IF NOT EXISTS idx_product_reviews_product_status ON product_reviews(product_id, status);
+    CREATE INDEX IF NOT EXISTS idx_product_reviews_ip ON product_reviews(ip_hash, created_at);
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS rating_avg NUMERIC(3,2) DEFAULT 0;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0;
+    UPDATE products p SET
+      rating_count = COALESCE(s.cnt, 0),
+      rating_avg = COALESCE(s.avg, 0)
+    FROM (
+      SELECT pr.id, COUNT(r.id)::int AS cnt, ROUND(AVG(r.rating)::numeric, 2) AS avg
+      FROM products pr
+      LEFT JOIN product_reviews r ON r.product_id = pr.id AND r.status = 'approved'
+      GROUP BY pr.id
+    ) s
+    WHERE s.id = p.id;
+  `)
+
+  // Hair types offered on review forms, managed from the admin panel. Seeded with the built-in
+  // list only when the table is first created, so types the admin deletes don't come back.
+  const hairTypesExisted = await db.query<{ exists: boolean }>(
+    `SELECT to_regclass('public.hair_types') IS NOT NULL AS exists`
+  )
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS hair_types (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `)
+  if (!hairTypesExisted.rows[0]?.exists) {
+    for (let i = 0; i < HAIR_TYPES.length; i++) {
+      await db.query(
+        'INSERT INTO hair_types (id, label, sort_order) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING',
+        [HAIR_TYPES[i].value, HAIR_TYPES[i].label, i]
+      )
+    }
+  }
 
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }

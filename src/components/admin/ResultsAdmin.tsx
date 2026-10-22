@@ -321,7 +321,7 @@ export function ResultsAdmin({
                 ].map((img) => (
                   <div key={img.label} className="relative aspect-[4/5] bg-sand-200/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img.src} alt={img.label} className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={img.src} alt={img.label} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
                     <span className="absolute left-2 bottom-2 text-[11px] font-medium px-2 py-0.5 rounded-full bg-white/90 text-brown-300">
                       {img.label}
                     </span>

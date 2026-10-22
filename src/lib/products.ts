@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto'
 import { query } from './db'
 import { sanitizeImageUrls } from './parse-image-urls'
-import { getHairTypeLabel, type HairType } from './constants'
+import { mapReviewRow, REVIEW_COLUMNS, REVIEW_FROM, type ReviewRow } from './reviews'
+import { sortReviewsForDisplay } from './review-order'
 import { isVariantUnit, type ProductVariant, type VariantUnit } from './variants'
 import { listResults, type BeforeAfterResult } from './home-content'
 
@@ -22,12 +23,20 @@ export { parseImageUrls } from './parse-image-urls'
 
 export interface ProductReview {
   id: string
+  /** Empty when the customer left no name — shown as "Anonim". */
   authorName: string
-  hairType: HairType
+  hairType: string
   hairTypeLabel: string
   rating: number
   comment: string
+  images: string[]
   createdAt: string
+}
+
+/** Approved-review summary; hidden on the site when count is 0. */
+export interface ProductRating {
+  average: number
+  count: number
 }
 
 export interface ProductDetail {
@@ -44,7 +53,9 @@ export interface ProductDetail {
   variantImages: boolean
   /** Active before/after results linked to this product. */
   beforeAfter: BeforeAfterResult[]
+  /** Approved reviews only, in product page order (see sortReviewsForDisplay). */
   reviews: ProductReview[]
+  rating: ProductRating
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductDetail | null> {
@@ -58,10 +69,12 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     price: string
     images: unknown
     variant_images: boolean | null
+    rating_avg: string | null
+    rating_count: number | null
     category_name: string | null
   }>(
     `SELECT p.id, p.name, p.slug, p.description, p.ingredients, p.how_to_use,
-            p.price, p.images, p.variant_images, c.name AS category_name
+            p.price, p.images, p.variant_images, p.rating_avg, p.rating_count, c.name AS category_name
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id
      WHERE p.slug = $1 AND COALESCE(p.status, 'active') = 'active'
@@ -75,18 +88,10 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
   const variants = (await loadVariants([row.id], true)).get(row.id) ?? []
   const beforeAfter = await listResults({ productId: row.id })
 
-  const reviewsResult = await query<{
-    id: string
-    author_name: string
-    hair_type: string
-    rating: number
-    comment: string
-    created_at: string
-  }>(
-    `SELECT id, author_name, hair_type, rating, comment, created_at
-     FROM product_reviews
-     WHERE product_id = $1 AND is_active = true
-     ORDER BY created_at DESC`,
+  const reviewsResult = await query<ReviewRow>(
+    `SELECT ${REVIEW_COLUMNS}
+     FROM ${REVIEW_FROM}
+     WHERE r.product_id = $1 AND r.status = 'approved'`,
     [row.id]
   )
 
@@ -103,16 +108,18 @@ export async function getProductBySlug(slug: string): Promise<ProductDetail | nu
     variants,
     variantImages: row.variant_images ?? false,
     beforeAfter,
-    reviews: reviewsResult.rows.map((r) => ({
-      id: r.id,
-      authorName: r.author_name,
-      hairType: r.hair_type as HairType,
-      hairTypeLabel: getHairTypeLabel(r.hair_type),
-      rating: r.rating,
-      comment: r.comment,
-      createdAt: r.created_at,
-    })),
+    reviews: sortReviewsForDisplay(
+      reviewsResult.rows.map((r) => {
+        const { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt } = mapReviewRow(r)
+        return { id, authorName, hairType, hairTypeLabel, rating, comment, images, createdAt }
+      })
+    ),
+    rating: toRating(row.rating_avg, row.rating_count),
   }
+}
+
+export function toRating(avg: string | number | null, count: number | null): ProductRating {
+  return { average: Number(avg) || 0, count: Number(count) || 0 }
 }
 
 export async function getAllProductSlugs(): Promise<string[]> {
