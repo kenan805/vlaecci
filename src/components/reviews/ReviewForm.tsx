@@ -147,21 +147,21 @@ export function ReviewForm({
         role="status"
         className="scroll-mt-28 rounded-3xl border border-sand-200/70 bg-cream-50 px-6 py-10 sm:px-10 text-center shadow-[0_1px_2px_rgba(74,61,50,0.04),0_8px_24px_-12px_rgba(74,61,50,0.12)]"
       >
-        <span
-          className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-            approved ? 'bg-accent-sage/15 text-accent-sage' : 'bg-amber-100 text-amber-600'
-          }`}
-        >
-          {approved ? <CheckCircle2 size={28} /> : <Clock size={26} />}
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent-sage/15 text-accent-sage">
+          <CheckCircle2 size={28} />
         </span>
-        <h3 className="mt-4 font-serif text-2xl text-brown-300">
-          {approved ? 'Qiymətiniz qəbul olundu' : 'Rəyiniz göndərildi'}
-        </h3>
+        <h3 className="mt-4 font-serif text-2xl text-brown-300">Rəyiniz üçün təşəkkürlər</h3>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-brown-100/80">
-          {approved
-            ? 'Təşəkkür edirik! Qiymətiniz məhsulun reytinqinə əlavə olundu.'
-            : 'Təşəkkür edirik! Rəyiniz admin təsdiqindən sonra saytda görünəcək.'}
+          Rəyiniz digər alıcılara seçim etməkdə kömək edəcək.
         </p>
+        {!approved && (
+          <div className="mt-3 flex justify-center">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-700">
+              <Clock size={13} />
+              Admin təsdiqindən sonra saytda görünəcək
+            </p>
+          </div>
+        )}
         <button
           type="button"
           onClick={onClose}

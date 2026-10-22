@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ProductImage } from './ProductImage'
 import Link from 'next/link'
 import {
@@ -74,6 +74,7 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
   const [reviewFilter, setReviewFilter] = useState<string>('all')
   const [showAllReviews, setShowAllReviews] = useState(false)
   const [reviewFormOpen, setReviewFormOpen] = useState(false)
+  const reviewsTopRef = useRef<HTMLDivElement>(null)
   const [reviews, setReviews] = useState<ProductReview[]>(product.reviews)
   const [rating, setRating] = useState(product.rating)
   const [qty, setQty] = useState(1)
@@ -107,6 +108,13 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
     : reviews.filter((r) => r.hairType === reviewFilter)
   const visibleReviews = showAllReviews ? filteredReviews : filteredReviews.slice(0, INITIAL_VISIBLE_REVIEWS)
   const hiddenReviewCount = filteredReviews.length - visibleReviews.length
+
+  // Collapse back to the first reviews and return to the top of the list, so the reader isn't
+  // left far below at the form / footer.
+  const collapseReviews = () => {
+    setShowAllReviews(false)
+    reviewsTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const changeReviewFilter = (value: string) => {
     setReviewFilter(value)
@@ -297,7 +305,7 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
         )}
 
         <section id="reyler" className="mt-6 border-t border-sand-200/60 pt-10 pb-4 scroll-mt-28">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div ref={reviewsTopRef} className="scroll-mt-28">
             <div>
               <h2 className="font-serif text-2xl md:text-3xl font-medium text-brown-300">Müştəri rəyləri</h2>
               {rating.count > 0 ? (
@@ -311,35 +319,10 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
                   </div>
                 </div>
               ) : (
-                <p className="mt-2 text-sm text-brown-100/70">Hələ rəy yoxdur. İlk rəyi siz yazın.</p>
+                <p className="mt-2 text-sm text-brown-100/70">Hələ rəy yoxdur.</p>
               )}
             </div>
-            {!reviewFormOpen && (
-              <button
-                type="button"
-                onClick={() => setReviewFormOpen(true)}
-                aria-controls="review-form"
-                className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-full bg-brown-300 px-6 text-sm font-medium text-cream-50 shadow-sm hover:bg-brown-400 transition-colors sm:self-auto"
-              >
-                <PenLine size={17} />
-                Rəy yaz
-              </button>
-            )}
           </div>
-
-          {reviewFormOpen && (
-            <div className="mt-8">
-              <ReviewForm
-                productSlug={product.slug}
-                hairTypes={hairTypes}
-                onClose={() => setReviewFormOpen(false)}
-                onPublished={(review, next) => {
-                  setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
-                  setRating(next)
-                }}
-              />
-            </div>
-          )}
 
           {reviews.length > 0 && (
             <div className="mt-8">
@@ -415,20 +398,66 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
                 })}
               </div>
 
-              {hiddenReviewCount > 0 && (
+              {filteredReviews.length > INITIAL_VISIBLE_REVIEWS && (
                 <div className="mt-6 flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setShowAllReviews(true)}
-                    className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
-                  >
-                    Daha çox göstər ({hiddenReviewCount})
-                    <ChevronDown size={16} />
-                  </button>
+                  {showAllReviews ? (
+                    <button
+                      type="button"
+                      onClick={collapseReviews}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                    >
+                      Daha az göstər
+                      <ChevronUp size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllReviews(true)}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                    >
+                      Daha çox göstər ({hiddenReviewCount})
+                      <ChevronDown size={16} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           )}
+
+          {/* Write a review — after the list: people read reviews first, then decide to write one. */}
+          <div className="mt-10">
+            {reviewFormOpen ? (
+              <ReviewForm
+                productSlug={product.slug}
+                hairTypes={hairTypes}
+                onClose={() => setReviewFormOpen(false)}
+                onPublished={(review, next) => {
+                  setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
+                  setRating(next)
+                }}
+              />
+            ) : (
+              <div className="flex flex-col gap-4 rounded-3xl border border-sand-200/70 bg-cream-100/60 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <div>
+                  <p className="font-serif text-xl text-brown-300">
+                    {reviews.length > 0 ? 'Bu məhsulu istifadə etmisiniz?' : 'İlk rəyi siz yazın'}
+                  </p>
+                  <p className="mt-1 text-sm text-brown-100/70">
+                    Təcrübənizi bölüşün — digər alıcılara doğru seçim etməyə kömək edin.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReviewFormOpen(true)}
+                  aria-controls="review-form"
+                  className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brown-300 px-6 text-sm font-medium text-cream-50 shadow-sm hover:bg-brown-400 transition-colors"
+                >
+                  <PenLine size={17} />
+                  Rəy yaz
+                </button>
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
