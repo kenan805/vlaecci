@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
 import { formatMoney, variantDisplayName, variantImages, type ProductVariant } from '@/lib/variants'
 import { VariantSelector } from './VariantSelector'
+import { ProductRating } from './reviews/RatingStars'
 
 interface Product {
   id: string
@@ -18,6 +19,7 @@ interface Product {
   images: string[]
   variants: ProductVariant[]
   variantImages: boolean
+  rating?: { average: number; count: number }
   category: { name: string }
 }
 
@@ -120,6 +122,7 @@ export function ProductGrid() {
               <h3 className="text-sm font-medium text-brown-300 group-hover:text-accent-rose transition-colors line-clamp-2 leading-snug">
                 {product.name}
               </h3>
+              <ProductRating rating={product.rating} size={13} className="mt-1" />
               {product.variants?.length > 0 && (
                 <div className="mt-2">
                   <VariantSelector

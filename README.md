@@ -11,6 +11,7 @@ Dermatoloq təsdiqli saç baxım məhsulları üçün modern mini SaaS veb sayt�
 - **Admin Panel** – Giriş, məhsullar, konsultasiyalar, quiz cavabları, endirim kodları
 - **WhatsApp** – Əlaqə düyməsi
 - **Endirim kodları** – Admin yaradır, müştərilər tətbiq edə bilər
+- **Məhsul rəyləri** – Ulduzla qiymət (1–5), mətn, ad və şəkil; mətn/şəkilli rəylər admin təsdiqindən sonra görünür, yalnız ulduz olanlar dərhal reytinqə düşür
 
 ## Texnologiyalar
 

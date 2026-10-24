@@ -21,7 +21,7 @@ export async function GET(
   const { path } = await params
   const pathname = path.join('/')
 
-  if (!pathname.startsWith('products/')) {
+  if (!pathname.startsWith('products/') && !pathname.startsWith('reviews/')) {
     return new Response('Not found', { status: 404 })
   }
 
@@ -35,6 +35,7 @@ export async function GET(
       headers: {
         'Content-Type': result.blob.contentType || 'image/jpeg',
         'Cache-Control': 'public, max-age=31536000, immutable',
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (err) {
