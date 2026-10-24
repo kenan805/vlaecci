@@ -1,5 +1,6 @@
 import { query } from './db'
-import { parseImages } from './products'
+import { loadVariants, parseImages } from './products'
+import type { ProductVariant } from './variants'
 
 export interface AnalysisOption {
   id: string
@@ -31,7 +32,19 @@ export interface AnalysisProfile {
   routineTitle: string
   routineDescription: string
   resultMessage: string
-  products: { id: string; name: string; slug: string; price: number; images: string[] }[]
+  products: AnalysisProduct[]
+}
+
+/** A recommended product, with what the result page needs to add it to the cart directly. */
+export interface AnalysisProduct {
+  id: string
+  name: string
+  slug: string
+  price: number
+  images: string[]
+  /** Active size/volume variants; empty when the product has none. */
+  variants: ProductVariant[]
+  variantImages: boolean
 }
 
 export async function getAnalysisQuestions(): Promise<AnalysisQuestion[]> {
@@ -103,7 +116,20 @@ export async function scoreAnalysisProfile(selectedOptionIds: string[]): Promise
 
   const profileId = scoresResult.rows[0]?.profile_id
   if (!profileId) return null
+  return loadAnalysisProfile(profileId)
+}
 
+/** The result of an earlier analysis (so a returning visitor sees current products and prices). */
+export async function getSessionProfile(sessionId: string): Promise<AnalysisProfile | null> {
+  const session = await query<{ profile_id: string | null }>(
+    'SELECT profile_id FROM analysis_sessions WHERE id = $1',
+    [sessionId]
+  )
+  const profileId = session.rows[0]?.profile_id
+  return profileId ? loadAnalysisProfile(profileId) : null
+}
+
+async function loadAnalysisProfile(profileId: string): Promise<AnalysisProfile | null> {
   const profileResult = await query<{
     id: string
     name: string
@@ -132,13 +158,21 @@ export async function scoreAnalysisProfile(selectedOptionIds: string[]): Promise
     slug: string
     price: string
     images: unknown
+    variant_images: boolean | null
   }>(
-    `SELECT p.id, p.name, p.slug, p.price, p.images
+    `SELECT p.id, p.name, p.slug, p.price, p.images, p.variant_images
      FROM analysis_profile_products app
      JOIN products p ON p.id = app.product_id
+     LEFT JOIN categories c ON c.id = p.category_id
      WHERE app.profile_id = $1
+       AND COALESCE(p.status, 'active') = 'active'
+       AND COALESCE(c.is_active, true) = true
      ORDER BY app.sort_order ASC`,
     [profileId]
+  )
+  const variantsByProduct = await loadVariants(
+    productsResult.rows.map((p) => p.id),
+    true
   )
 
   return {
@@ -158,6 +192,8 @@ export async function scoreAnalysisProfile(selectedOptionIds: string[]): Promise
       slug: p.slug,
       price: Number(p.price),
       images: parseImages(p.images),
+      variants: variantsByProduct.get(p.id) ?? [],
+      variantImages: p.variant_images ?? false,
     })),
   }
 }
