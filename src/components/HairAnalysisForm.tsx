@@ -1,12 +1,20 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Loader2, Sparkles, Check, ArrowLeft, ArrowRight, RotateCcw } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
 import type { AnalysisQuestion, AnalysisProfile } from '@/lib/analysis'
+import { clearSavedAnalysis, loadSavedAnalysis, saveAnalysis } from '@/lib/analysis-storage'
+import { RecommendedProducts } from './analysis/RecommendedProducts'
+
+function formatDate(value: string) {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
+}
 
 /* Decorative animated flowing hair — evokes the logo, gently sways */
 function FlowingHair({ className = '' }: { className?: string }) {
@@ -47,7 +55,38 @@ export function HairAnalysisForm() {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<AnalysisProfile | null>(null)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  // True until the saved result (if any) has been read from the browser — avoids flashing the intro.
+  const [restoring, setRestoring] = useState(true)
   const [error, setError] = useState('')
+
+  // Restore the last result, then refresh it from the server so products and prices are current.
+  useEffect(() => {
+    const saved = loadSavedAnalysis()
+    setRestoring(false)
+    if (!saved) return
+    setResult(saved.profile)
+    setSavedAt(saved.savedAt)
+    apiFetch(`/analysis/result/${saved.sessionId}`)
+      .then(async (res) => {
+        if (res.status === 404) {
+          // The analysis or its profile no longer exists — start fresh.
+          clearSavedAnalysis()
+          setResult(null)
+          setSavedAt(null)
+          return
+        }
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.profile) {
+          setResult(data.profile)
+          saveAnalysis(saved.sessionId, data.profile, saved.savedAt)
+        }
+      })
+      .catch(() => {
+        /* offline — keep showing the saved result */
+      })
+  }, [])
 
   useEffect(() => {
     apiFetch('/analysis/questions')
@@ -104,6 +143,9 @@ export function HairAnalysisForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Xəta baş verdi')
       setResult(data.profile)
+      const now = new Date().toISOString()
+      setSavedAt(now)
+      if (data.sessionId) saveAnalysis(data.sessionId, data.profile, now)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Xəta baş verdi')
     } finally {
@@ -112,6 +154,8 @@ export function HairAnalysisForm() {
   }
 
   const restart = () => {
+    clearSavedAnalysis()
+    setSavedAt(null)
     setResult(null)
     setSelectedOptions({})
     setCurrentIndex(0)
@@ -120,7 +164,7 @@ export function HairAnalysisForm() {
   }
 
   /* ---------------- Loading ---------------- */
-  if (loading) {
+  if (restoring || (loading && !result)) {
     return (
       <div className="flex justify-center py-24">
         <Loader2 size={32} className="animate-spin text-brown-300" />
@@ -170,29 +214,13 @@ export function HairAnalysisForm() {
           )}
         </div>
 
-        {result.products.length > 0 && (
-          <div className="mb-8">
-            <h3 className="font-serif text-xl font-medium text-brown-300 mb-4">Sizin üçün tövsiyə olunan məhsullar</h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {result.products.map((p, i) => (
-                <motion.div key={p.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 * i }}>
-                  <Link
-                    href={`/mehsullar/${p.slug}`}
-                    className="flex items-center justify-between p-4 bg-cream-100 rounded-xl border border-sand-200/50 hover:border-accent-rose/40 hover:shadow-sm transition-all"
-                  >
-                    <div>
-                      <div className="font-medium text-brown-300">{p.name}</div>
-                      <div className="text-sm text-brown-100 mt-0.5">{p.price} ₼</div>
-                    </div>
-                    <ArrowRight size={18} className="text-accent-rose" />
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
+        {result.products.length > 0 && <RecommendedProducts products={result.products} />}
 
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-xs text-brown-100/60 text-center">
+            Nəticəniz bu cihazda yadda saxlanılır{savedAt ? ` · ${formatDate(savedAt)}` : ''} — məhsullara baxıb qayıtsanız da
+            itməyəcək.
+          </p>
           <button
             type="button"
             onClick={restart}
