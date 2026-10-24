@@ -9,13 +9,6 @@ import type { AnalysisQuestion, AnalysisProfile } from '@/lib/analysis'
 import { clearSavedAnalysis, loadSavedAnalysis, saveAnalysis } from '@/lib/analysis-storage'
 import { RecommendedProducts } from './analysis/RecommendedProducts'
 
-function formatDate(value: string) {
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`
-}
-
 /* Decorative animated flowing hair — evokes the logo, gently sways */
 function FlowingHair({ className = '' }: { className?: string }) {
   return (
@@ -55,7 +48,6 @@ export function HairAnalysisForm() {
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<AnalysisProfile | null>(null)
-  const [savedAt, setSavedAt] = useState<string | null>(null)
   // True until the saved result (if any) has been read from the browser — avoids flashing the intro.
   const [restoring, setRestoring] = useState(true)
   const [error, setError] = useState('')
@@ -66,14 +58,12 @@ export function HairAnalysisForm() {
     setRestoring(false)
     if (!saved) return
     setResult(saved.profile)
-    setSavedAt(saved.savedAt)
     apiFetch(`/analysis/result/${saved.sessionId}`)
       .then(async (res) => {
         if (res.status === 404) {
           // The analysis or its profile no longer exists — start fresh.
           clearSavedAnalysis()
           setResult(null)
-          setSavedAt(null)
           return
         }
         if (!res.ok) return
@@ -143,9 +133,7 @@ export function HairAnalysisForm() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Xəta baş verdi')
       setResult(data.profile)
-      const now = new Date().toISOString()
-      setSavedAt(now)
-      if (data.sessionId) saveAnalysis(data.sessionId, data.profile, now)
+      if (data.sessionId) saveAnalysis(data.sessionId, data.profile)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Xəta baş verdi')
     } finally {
@@ -155,7 +143,6 @@ export function HairAnalysisForm() {
 
   const restart = () => {
     clearSavedAnalysis()
-    setSavedAt(null)
     setResult(null)
     setSelectedOptions({})
     setCurrentIndex(0)
@@ -216,11 +203,7 @@ export function HairAnalysisForm() {
 
         {result.products.length > 0 && <RecommendedProducts products={result.products} />}
 
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-xs text-brown-100/60 text-center">
-            Nəticəniz bu cihazda yadda saxlanılır{savedAt ? ` · ${formatDate(savedAt)}` : ''} — məhsullara baxıb qayıtsanız da
-            itməyəcək.
-          </p>
+        <div className="flex justify-center">
           <button
             type="button"
             onClick={restart}
