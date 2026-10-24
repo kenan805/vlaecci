@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ProductImage } from './ProductImage'
 import Link from 'next/link'
 import {
   ArrowLeft,
   ArrowDown,
-  Star,
+  PenLine,
   ChevronDown,
   ChevronUp,
   ShoppingBag,
@@ -17,13 +17,27 @@ import {
 import { DiscountCodeInput } from './DiscountCodeInput'
 import { apiFetch } from '@/lib/api'
 import { useCart } from '@/lib/cart'
-import type { ProductDetail as ProductDetailType } from '@/lib/products'
+import type { ProductDetail as ProductDetailType, ProductReview } from '@/lib/products'
 import { formatMoney, variantDisplayName, variantImages } from '@/lib/variants'
 import { VariantSelector } from './VariantSelector'
 import { BeforeAfterSlider } from './BeforeAfterSlider'
+import { ProductRating, RatingStars } from './reviews/RatingStars'
+import { ReviewImages } from './reviews/ImageLightbox'
+import { ReviewForm } from './reviews/ReviewForm'
+import { INITIAL_VISIBLE_REVIEWS, sortReviewsForDisplay } from '@/lib/review-order'
+
+/** dd.mm.yyyy in UTC — identical on server and client, so hydration matches. */
+function formatReviewDate(value: string) {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth() + 1)}.${d.getUTCFullYear()}`
+}
 
 interface ProductDetailProps {
   product: ProductDetailType
+  /** Active hair types offered on the review form. */
+  hairTypes: { id: string; label: string }[]
 }
 
 function Section({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
@@ -43,7 +57,7 @@ function Section({ title, children, defaultOpen = true }: { title: string; child
   )
 }
 
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0)
   const [variantId, setVariantId] = useState<string | null>(product.variants?.[0]?.id ?? null)
   const variant = product.variants?.find((v) => v.id === variantId) ?? null
@@ -58,6 +72,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
     setActiveImage(0)
   }
   const [reviewFilter, setReviewFilter] = useState<string>('all')
+  const [showAllReviews, setShowAllReviews] = useState(false)
+  const [reviewFormOpen, setReviewFormOpen] = useState(false)
+  const reviewsTopRef = useRef<HTMLDivElement>(null)
+  const [reviews, setReviews] = useState<ProductReview[]>(product.reviews)
+  const [rating, setRating] = useState(product.rating)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const { add } = useCart()
@@ -85,10 +104,24 @@ export function ProductDetail({ product }: ProductDetailProps) {
   }, [product.slug])
 
   const filteredReviews = reviewFilter === 'all'
-    ? product.reviews
-    : product.reviews.filter((r) => r.hairType === reviewFilter)
+    ? reviews
+    : reviews.filter((r) => r.hairType === reviewFilter)
+  const visibleReviews = showAllReviews ? filteredReviews : filteredReviews.slice(0, INITIAL_VISIBLE_REVIEWS)
+  const hiddenReviewCount = filteredReviews.length - visibleReviews.length
 
-  const hairTypesInReviews = Array.from(new Set(product.reviews.map((r) => r.hairType)))
+  // Collapse back to the first reviews and return to the top of the list, so the reader isn't
+  // left far below at the form / footer.
+  const collapseReviews = () => {
+    setShowAllReviews(false)
+    reviewsTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const changeReviewFilter = (value: string) => {
+    setReviewFilter(value)
+    setShowAllReviews(false)
+  }
+
+  const hairTypesInReviews = Array.from(new Set(reviews.map((r) => r.hairType).filter(Boolean)))
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -163,10 +196,15 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
         <div>
           <span className="text-sm text-accent-rose font-medium">{product.category?.name}</span>
-          <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-4">
+          <h1 className="font-serif text-3xl md:text-4xl font-medium text-brown-300 mt-1 mb-2">
             {product.name}
           </h1>
-          <p className="text-4xl font-medium text-brown-300 mb-6">{formatMoney(price)} ₼</p>
+          {rating?.count > 0 && (
+            <a href="#reyler" className="inline-flex mb-3 hover:opacity-80 transition-opacity">
+              <ProductRating rating={rating} size={18} />
+            </a>
+          )}
+          <p className="text-4xl font-medium text-brown-300 mb-6 mt-2">{formatMoney(price)} ₼</p>
           {product.variants?.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-brown-200 mb-2.5">
@@ -266,65 +304,161 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </Section>
         )}
 
-        {product.reviews.length > 0 && (
-          <div className="py-8">
-            <h2 className="font-serif text-2xl font-medium text-brown-300 mb-6">Müştəri rəyləri</h2>
+        <section id="reyler" className="mt-6 border-t border-sand-200/60 pt-10 pb-4 scroll-mt-28">
+          <div ref={reviewsTopRef} className="scroll-mt-28">
+            <div>
+              <h2 className="font-serif text-2xl md:text-3xl font-medium text-brown-300">Müştəri rəyləri</h2>
+              {rating.count > 0 ? (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="font-serif text-4xl leading-none text-brown-300 tabular-nums">
+                    {rating.average.toFixed(1).replace('.', ',')}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <RatingStars value={rating.average} size={18} />
+                    <span className="text-xs text-brown-100/70">{rating.count} rəy əsasında</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-brown-100/70">Hələ rəy yoxdur.</p>
+              )}
+            </div>
+          </div>
 
-            {hairTypesInReviews.length > 1 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                <button
-                  type="button"
-                  onClick={() => setReviewFilter('all')}
-                  className={`px-3 py-1.5 rounded-full text-sm ${
-                    reviewFilter === 'all' ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
-                  }`}
-                >
-                  Hamısı
-                </button>
-                {hairTypesInReviews.map((ht) => {
-                  const label = product.reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht
-                  return (
+          {reviews.length > 0 && (
+            <div className="mt-8">
+              {hairTypesInReviews.length > 1 && (
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {[{ value: 'all', label: 'Hamısı' }, ...hairTypesInReviews.map((ht) => ({
+                    value: ht,
+                    label: reviews.find((r) => r.hairType === ht)?.hairTypeLabel || ht,
+                  }))].map((f) => (
                     <button
-                      key={ht}
+                      key={f.value}
                       type="button"
-                      onClick={() => setReviewFilter(ht)}
-                      className={`px-3 py-1.5 rounded-full text-sm ${
-                        reviewFilter === ht ? 'bg-brown-300 text-cream-50' : 'bg-sand-200 text-brown-100'
+                      onClick={() => changeReviewFilter(f.value)}
+                      className={`h-9 rounded-full px-4 text-sm transition-colors ${
+                        reviewFilter === f.value
+                          ? 'bg-brown-300 text-cream-50'
+                          : 'border border-sand-200 bg-cream-50 text-brown-100 hover:border-sand-300 hover:text-brown-300'
                       }`}
                     >
-                      {label}
+                      {f.label}
                     </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {visibleReviews.map((review) => {
+                  const name = review.authorName || 'Anonim'
+                  return (
+                    <article
+                      key={review.id}
+                      className="rounded-2xl border border-sand-200/60 bg-cream-50 p-5 sm:p-6"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span
+                          aria-hidden
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sand-200/70 text-sm font-semibold text-brown-200"
+                        >
+                          {name.charAt(0).toLocaleUpperCase('az')}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-brown-300">{name}</span>
+                              {review.hairTypeLabel && (
+                                <span className="rounded-full bg-accent-sage/15 px-2.5 py-0.5 text-xs text-brown-200">
+                                  {review.hairTypeLabel}
+                                </span>
+                              )}
+                            </div>
+                            <time dateTime={review.createdAt} className="text-xs text-brown-100/60">
+                              {formatReviewDate(review.createdAt)}
+                            </time>
+                          </div>
+                          <div className="mt-1">
+                            <span className="sr-only">{review.rating} / 5</span>
+                            <RatingStars value={review.rating} size={14} />
+                          </div>
+                          {review.comment && (
+                            <p className="mt-3 text-[15px] leading-relaxed text-brown-100/90 whitespace-pre-line">
+                              {review.comment}
+                            </p>
+                          )}
+                          {review.images.length > 0 && (
+                            <div className="mt-4">
+                              <ReviewImages images={review.images} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </article>
                   )
                 })}
               </div>
-            )}
 
-            <div className="space-y-4">
-              {filteredReviews.map((review) => (
-                <div key={review.id} className="p-5 bg-cream-100 rounded-2xl border border-sand-200/50">
-                  <div className="flex items-start justify-between gap-4 mb-2">
-                    <div>
-                      <span className="font-medium text-brown-300">{review.authorName}</span>
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-accent-sage/20 text-brown-100">
-                        {review.hairTypeLabel}
-                      </span>
-                    </div>
-                    <div className="flex gap-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          size={14}
-                          className={i < review.rating ? 'fill-accent-rose text-accent-rose' : 'text-sand-300'}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-brown-100/90 text-sm leading-relaxed">{review.comment}</p>
+              {filteredReviews.length > INITIAL_VISIBLE_REVIEWS && (
+                <div className="mt-6 flex justify-center">
+                  {showAllReviews ? (
+                    <button
+                      type="button"
+                      onClick={collapseReviews}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                    >
+                      Daha az göstər
+                      <ChevronUp size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllReviews(true)}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-full border border-sand-300 px-6 text-sm font-medium text-brown-300 hover:bg-sand-200/50 transition-colors"
+                    >
+                      Daha çox göstər ({hiddenReviewCount})
+                      <ChevronDown size={16} />
+                    </button>
+                  )}
                 </div>
-              ))}
+              )}
             </div>
+          )}
+
+          {/* Write a review — after the list: people read reviews first, then decide to write one. */}
+          <div className="mt-10">
+            {reviewFormOpen ? (
+              <ReviewForm
+                productSlug={product.slug}
+                hairTypes={hairTypes}
+                onClose={() => setReviewFormOpen(false)}
+                onPublished={(review, next) => {
+                  setReviews((cur) => sortReviewsForDisplay([review, ...cur]))
+                  setRating(next)
+                }}
+              />
+            ) : (
+              <div className="flex flex-col gap-4 rounded-3xl border border-sand-200/70 bg-cream-100/60 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+                <div>
+                  <p className="font-serif text-xl text-brown-300">
+                    {reviews.length > 0 ? 'Bu məhsulu istifadə etmisiniz?' : 'İlk rəyi siz yazın'}
+                  </p>
+                  <p className="mt-1 text-sm text-brown-100/70">
+                    Təcrübənizi bölüşün — digər alıcılara doğru seçim etməyə kömək edin.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReviewFormOpen(true)}
+                  aria-controls="review-form"
+                  className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brown-300 px-6 text-sm font-medium text-cream-50 shadow-sm hover:bg-brown-400 transition-colors"
+                >
+                  <PenLine size={17} />
+                  Rəy yaz
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
     </div>
   )

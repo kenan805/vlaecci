@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { loadVariants, parseImages } from '@/lib/products'
+import { loadVariants, parseImages, toRating } from '@/lib/products'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,9 +14,12 @@ export async function GET() {
       price: string
       images: string[]
       variant_images: boolean | null
+      rating_avg: string | null
+      rating_count: number | null
       category_name: string
     }>(
-      `SELECT p.id, p.name, p.slug, p.description, p.price, p.images, p.variant_images, c.name AS category_name
+      `SELECT p.id, p.name, p.slug, p.description, p.price, p.images, p.variant_images,
+              p.rating_avg, p.rating_count, c.name AS category_name
        FROM products p
        LEFT JOIN categories c ON c.id = p.category_id
        WHERE COALESCE(p.status, 'active') = 'active'
@@ -38,6 +41,7 @@ export async function GET() {
       images: parseImages(p.images),
       variants: variantsByProduct.get(p.id) ?? [],
       variantImages: p.variant_images ?? false,
+      rating: toRating(p.rating_avg, p.rating_count),
       category: { name: p.category_name },
     }))
 

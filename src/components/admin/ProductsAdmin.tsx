@@ -28,7 +28,6 @@ import {
   Check,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/api'
-import { HAIR_TYPES, getHairTypeLabel } from '@/lib/constants'
 import { compressImageFile } from '@/lib/compress-image'
 import { isValidImageUrl } from '@/lib/parse-image-urls'
 import { variantSize, type ProductVariant } from '@/lib/variants'
@@ -64,8 +63,11 @@ interface Review {
   id: string
   authorName: string
   hairType: string
+  hairTypeLabel?: string
   rating: number
   comment: string
+  images?: string[]
+  status?: 'pending' | 'approved' | 'rejected'
   isActive?: boolean
   createdAt?: string
 }
@@ -102,9 +104,10 @@ const selectChevronStyle = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B5344' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
 }
 
-// Frosted-glass toolbar controls
+// Toolbar controls. No backdrop-blur: it costs an extra GPU pass every scroll frame and
+// the page background behind these controls is flat anyway.
 const glassControl =
-  'h-10 rounded-xl border border-sand-200/70 bg-white/55 backdrop-blur-sm text-sm text-brown-300 placeholder:text-brown-100/40 focus:outline-none focus:ring-2 focus:ring-brown-300/25 focus:border-brown-300/50 transition-colors'
+  'h-10 rounded-xl border border-sand-200/70 bg-white/70 text-sm text-brown-300 placeholder:text-brown-100/40 focus:outline-none focus:ring-2 focus:ring-brown-300/25 focus:border-brown-300/50 transition-colors'
 
 const glassSelect = `${glassControl} appearance-none pl-3.5 pr-9 bg-[length:16px] bg-[right_12px_center] bg-no-repeat cursor-pointer hover:border-brown-300/45`
 
@@ -629,10 +632,22 @@ function ReviewFormModal({
 }) {
   const { toast } = useToast()
   const [authorName, setAuthorName] = useState(review?.authorName || '')
-  const [hairType, setHairType] = useState(review?.hairType || 'normal')
+  const [hairType, setHairType] = useState(review?.hairType || '')
   const [rating, setRating] = useState(review?.rating?.toString() || '5')
   const [comment, setComment] = useState(review?.comment || '')
   const [loading, setLoading] = useState(false)
+  const [hairTypes, setHairTypes] = useState<{ id: string; label: string; isActive: boolean }[]>([])
+
+  useEffect(() => {
+    apiFetch('/admin/hair-types')
+      .then((r) => r.json())
+      .then((d) => setHairTypes(d.hairTypes || []))
+      .catch(() => {})
+  }, [])
+
+  // Keep the review's current value selectable even if it is the customer's own wording or a deleted type.
+  const hairTypeOptions = hairTypes.filter((h) => h.isActive || h.id === hairType)
+  const currentIsListed = !hairType || hairTypes.some((h) => h.id === hairType)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -656,7 +671,6 @@ function ReviewFormModal({
             hairType,
             rating: Number(rating),
             comment,
-            isActive: review.isActive ?? true,
           }),
         })
         const data = await res.json()
@@ -695,7 +709,12 @@ function ReviewFormModal({
       <form id="review-form" onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Ad</label>
-          <input value={authorName} onChange={(e) => setAuthorName(e.target.value)} className={fieldClassName} required />
+          <input
+            value={authorName}
+            onChange={(e) => setAuthorName(e.target.value)}
+            placeholder="Boş qalsa “Anonim” göstərilir"
+            className={fieldClassName}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Saç tipi</label>
@@ -704,13 +723,14 @@ function ReviewFormModal({
             onChange={(e) => setHairType(e.target.value)}
             className={modernSelectClassName}
             style={selectChevronStyle}
-            required
           >
-            {HAIR_TYPES.map((h) => (
-              <option key={h.value} value={h.value}>
+            <option value="">Göstərilməsin</option>
+            {hairTypeOptions.map((h) => (
+              <option key={h.id} value={h.id}>
                 {h.label}
               </option>
             ))}
+            {!currentIsListed && <option value={hairType}>{review?.hairTypeLabel || hairType}</option>}
           </select>
         </div>
         <div>
@@ -730,7 +750,7 @@ function ReviewFormModal({
         </div>
         <div>
           <label className="block text-sm font-medium text-brown-100 mb-1.5">Rəy</label>
-          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className={fieldClassName} required />
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className={fieldClassName} />
         </div>
       </form>
     </AdminModal>
@@ -794,7 +814,11 @@ function ProductReviewsModal({
         }),
       })
       if (!res.ok) throw new Error('Xəta')
-      setReviews((prev) => prev.map((x) => (x.id === r.id ? { ...x, isActive: nextActive } : x)))
+      setReviews((prev) =>
+        prev.map((x) =>
+          x.id === r.id ? { ...x, isActive: nextActive, status: nextActive ? 'approved' : 'rejected' } : x
+        )
+      )
       toast(nextActive ? 'Rəy aktiv edildi' : 'Rəy deaktiv edildi')
       onRefresh()
     } catch {
@@ -807,7 +831,7 @@ function ProductReviewsModal({
   const filtered = reviews.filter((r) => {
     if (!search) return true
     const q = search.toLowerCase().trim()
-    return r.authorName.toLowerCase().includes(q) || r.comment.toLowerCase().includes(q)
+    return (r.authorName || 'Anonim').toLowerCase().includes(q) || r.comment.toLowerCase().includes(q)
   })
 
   return (
@@ -869,18 +893,38 @@ function ProductReviewsModal({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-brown-300 text-sm">{r.authorName}</span>
-                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200">
-                            {getHairTypeLabel(r.hairType)}
-                          </span>
-                          <StarRating rating={r.rating} />
-                          {!active && (
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-brown-100/10 text-brown-100/60">
-                              Deaktiv
+                          <span className="font-medium text-brown-300 text-sm">{r.authorName || 'Anonim'}</span>
+                          {r.hairTypeLabel && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-sand-200/60 text-brown-200">
+                              {r.hairTypeLabel}
                             </span>
                           )}
+                          <StarRating rating={r.rating} />
+                          {r.status === 'pending' ? (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              Gözləmədə
+                            </span>
+                          ) : (
+                            !active && (
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-brown-100/10 text-brown-100/60">
+                                Rədd edilib
+                              </span>
+                            )
+                          )}
                         </div>
-                        <p className="text-sm text-brown-100/90 mt-1.5 leading-relaxed whitespace-pre-line">{r.comment}</p>
+                        {r.comment && (
+                          <p className="text-sm text-brown-100/90 mt-1.5 leading-relaxed whitespace-pre-line">{r.comment}</p>
+                        )}
+                        {r.images && r.images.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {r.images.map((src) => (
+                              <a key={src} href={src} target="_blank" rel="noopener noreferrer" className="block">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-lg object-cover border border-sand-200/70" />
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         {r.createdAt && <p className="text-xs text-brown-100/50 mt-1.5">{formatDate(r.createdAt)}</p>}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
@@ -1696,6 +1740,8 @@ export function ProductsAdmin({
                             <img
                               src={p.images[0]}
                               alt=""
+                              loading="lazy"
+                              decoding="async"
                               className="w-11 h-11 rounded-xl object-cover border border-sand-200/60 hover:ring-2 hover:ring-brown-300/25 transition-shadow"
                             />
                           </button>
@@ -1846,7 +1892,7 @@ export function ProductsAdmin({
                             statusMenu?.id === p.id ? null : { id: p.id, top: r.bottom + 6, left: Math.max(8, r.right - 168) }
                           )
                         }}
-                        className={`group inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full text-[11px] font-medium ring-1 backdrop-blur transition-colors ${STATUS_STYLES[p.status].pill}`}
+                        className={`group inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-full text-[11px] font-medium ring-1 transition-colors ${STATUS_STYLES[p.status].pill}`}
                         title="Status dəyiş"
                       >
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_STYLES[p.status].dot}`} />
@@ -1857,7 +1903,7 @@ export function ProductsAdmin({
                     {p.images?.[0] ? (
                       <button type="button" onClick={() => setLightboxSrc(p.images![0])} className="block w-full cursor-zoom-in">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.images[0]} alt="" className="w-full aspect-square rounded-lg object-cover border border-sand-200/60" />
+                        <img src={p.images[0]} alt="" loading="lazy" decoding="async" className="w-full aspect-square rounded-lg object-cover border border-sand-200/60" />
                       </button>
                     ) : (
                       <div className="w-full aspect-square rounded-lg bg-sand-200/40 flex items-center justify-center text-sand-400">

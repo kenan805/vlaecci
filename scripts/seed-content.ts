@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 import { randomUUID } from 'crypto'
 import { query, ensureDb } from '../src/lib/db'
+import { recalcProductRating } from '../src/lib/reviews'
 
 // --- load .env.local (copied from scripts/seed.ts) -------------------------
 function loadEnvLocal() {
@@ -317,12 +318,15 @@ async function main() {
     for (const r of reviews) {
       const daysAgo = rand(1, 120)
       await query(
-        `INSERT INTO product_reviews (id, product_id, author_name, hair_type, rating, comment, is_active, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7, NOW() - ($8 || ' days')::interval)`,
+        `INSERT INTO product_reviews (id, product_id, author_name, hair_type, rating, comment, is_active, status, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'approved', NOW() - ($8 || ' days')::interval)`,
         [randomUUID(), productId, r.author, r.hair_type, r.rating, r.comment, true, String(daysAgo)]
       )
       reviewCount++
     }
+  }
+  for (const productId of Object.values(productIds)) {
+    await recalcProductRating(productId)
   }
 
   // --- Analysis quiz -------------------------------------------------------
