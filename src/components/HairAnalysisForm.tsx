@@ -162,7 +162,7 @@ export function HairAnalysisForm() {
   /* ---------------- Result ---------------- */
   if (result) {
     return (
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto">
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto pt-4 sm:pt-8">
         <div className="text-center mb-10">
           <motion.div
             initial={{ scale: 0.5, rotate: -20, opacity: 0 }}
