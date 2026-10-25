@@ -102,8 +102,21 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-brown-300/30 text-center text-sm text-cream-200/60">
-          © {new Date().getFullYear()} VLAECCI. Bütün hüquqlar qorunur.
+        {/* Stacked and centred on phones; copyright left, credit right from sm */}
+        <div className="mt-12 flex flex-col items-center gap-2 border-t border-brown-300/30 pt-8 text-center text-sm text-cream-200/60 sm:flex-row sm:justify-between sm:text-left">
+          <p>© {new Date().getFullYear()} VLAECCI. Bütün hüquqlar qorunur.</p>
+          <p>
+            Site by{' '}
+            {/* No nofollow/noreferrer: the credit is meant to pass link value and show up in Newasoft's referrals */}
+            <a
+              href="https://newasoft.tech"
+              target="_blank"
+              rel="noopener"
+              className="-my-2.5 inline-block py-2.5 font-medium text-cream-200/80 underline-offset-4 transition-colors hover:text-cream-50 hover:underline"
+            >
+              Newasoft
+            </a>
+          </p>
         </div>
       </div>
     </footer>
