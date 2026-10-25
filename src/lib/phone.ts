@@ -26,3 +26,8 @@ export function isValidAzPhone(input: string): boolean {
   const d = localDigits(input)
   return d.length === 10 && MOBILE_CODES.includes(d.slice(1, 3))
 }
+
+/** Canonical form for storage and links: "+994993334405". Assumes a valid number. */
+export function toE164AzPhone(input: string): string {
+  return `+994${localDigits(input).slice(1)}`
+}
