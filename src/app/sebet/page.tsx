@@ -10,8 +10,8 @@ import { ProductImage } from '@/components/ProductImage'
 import { cartKey, useCart } from '@/lib/cart'
 import { apiFetch } from '@/lib/api'
 import { formatAzPhone, isValidAzPhone, PHONE_PLACEHOLDER } from '@/lib/phone'
-
-const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '+994557087999'
+import { whatsappHref } from '@/lib/contact-phone'
+import { getContactPhoneNow } from '@/lib/use-contact-phone'
 
 interface OrderResponseItem {
   name: string
@@ -162,8 +162,8 @@ export default function CartPage() {
       lines.push(`Tel: ${phone.trim()}`)
       if (address.trim()) lines.push(`Ünvan: ${address.trim()}`)
 
-      const waNumber = WHATSAPP_NUMBER.replace(/\D/g, '')
-      const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(lines.join('\n'))}`
+      // The number set in admin "Sayt ayarları" (falls back to the default if it can't be loaded).
+      const url = whatsappHref(await getContactPhoneNow(), lines.join('\n'))
       if (typeof window !== 'undefined') {
         window.open(url, '_blank', 'noopener,noreferrer')
       }

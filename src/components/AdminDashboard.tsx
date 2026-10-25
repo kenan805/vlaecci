@@ -30,6 +30,7 @@ import { ProductsAdmin, type Product } from './admin/ProductsAdmin'
 import { DiscountManager } from './admin/DiscountManager'
 import { StatsDashboard } from './admin/StatsDashboard'
 import { ProfileSettings } from './admin/ProfileSettings'
+import { SiteSettingsAdmin } from './admin/SiteSettingsAdmin'
 import { AnalysisLeadsAdmin } from './admin/AnalysisLeadsAdmin'
 import { OrdersAdmin } from './admin/OrdersAdmin'
 import { ResultsAdmin } from './admin/ResultsAdmin'
@@ -51,6 +52,7 @@ type Tab =
   | 'testimonials'
   | 'messages'
   | 'discounts'
+  | 'settings'
   | 'profile'
 
 interface DiscountCode {
@@ -195,6 +197,7 @@ function AdminDashboardInner() {
     { id: 'testimonials' as Tab, label: 'Müştəri rəyləri', icon: MessageSquare },
     { id: 'messages' as Tab, label: 'Mesajlar', icon: Inbox },
     { id: 'discounts' as Tab, label: 'Endirim kodları', icon: Tag },
+    { id: 'settings' as Tab, label: 'Sayt ayarları', icon: Settings },
   ]
 
   if (loading) {
@@ -365,6 +368,7 @@ function AdminDashboardInner() {
           {tab === 'testimonials' && <TestimonialsAdmin />}
           {tab === 'messages' && <MessagesAdmin />}
           {tab === 'discounts' && <DiscountManager discounts={discounts} onSave={fetchData} />}
+          {tab === 'settings' && <SiteSettingsAdmin />}
           {tab === 'profile' && <ProfileSettings onUpdated={fetchData} />}
         </main>
       </div>
