@@ -48,3 +48,6 @@ new.pub
 # Local uploads (keep folder)
 public/uploads/*
 !public/uploads/.gitkeep
+
+# dev → prod data sync backups (contain customer data — never commit)
+.sync-backups/
