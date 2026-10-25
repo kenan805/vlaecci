@@ -2,7 +2,9 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Instagram } from 'lucide-react'
+import { Instagram, MessageCircle, Phone } from 'lucide-react'
+import { displayPhone, telHref, whatsappHref } from '@/lib/contact-phone'
+import { useContactPhone } from '@/lib/use-contact-phone'
 
 const instagramHandle = process.env.NEXT_PUBLIC_INSTAGRAM_USERNAME || 'vlaecci'
 
@@ -12,12 +14,17 @@ const footerLinks = [
   { href: '/elaqe', label: 'Əlaqə' },
 ]
 
+const contactLinkClass =
+  'inline-flex min-h-[40px] items-center gap-2.5 whitespace-nowrap text-cream-200/80 hover:text-cream-50 text-sm transition-colors'
+
 export function Footer() {
+  const phone = useContactPhone()
   return (
     <footer className="bg-brown-400 text-cream-200 py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid md:grid-cols-4 gap-12">
-          <div className="md:col-span-2">
+        {/* 1 column on phones, 2 on tablets (brand on its own row), 4 from lg */}
+        <div className="grid gap-10 sm:grid-cols-2 sm:gap-12 lg:grid-cols-4">
+          <div className="sm:col-span-2">
             <div className="flex items-center gap-3 mb-4">
               <Image
                 src="/logo-mark-light.png"
@@ -53,16 +60,45 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-medium text-cream-50 mb-4">Əlaqə</h4>
-            <a
-              href={`https://instagram.com/${instagramHandle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-cream-200/80 hover:text-cream-50 text-sm transition-colors"
-            >
-              <Instagram size={18} />
-              @{instagramHandle}
-            </a>
+            <h4 className="font-medium text-cream-50 mb-3">Əlaqə</h4>
+            <ul className="space-y-1">
+              <li>
+                {phone ? (
+                  <a href={telHref(phone)} className={`${contactLinkClass} tabular-nums`}>
+                    <Phone size={18} className="shrink-0" />
+                    {displayPhone(phone)}
+                  </a>
+                ) : (
+                  // Reserve the row while the number loads so the footer doesn't jump.
+                  <span className="flex min-h-[40px] items-center" aria-hidden>
+                    <span className="h-4 w-40 rounded bg-cream-200/10" />
+                  </span>
+                )}
+              </li>
+              <li>
+                {phone ? (
+                  <a href={whatsappHref(phone)} target="_blank" rel="noopener noreferrer" className={contactLinkClass}>
+                    <MessageCircle size={18} className="shrink-0" />
+                    WhatsApp-da yazın
+                  </a>
+                ) : (
+                  <span className="flex min-h-[40px] items-center" aria-hidden>
+                    <span className="h-4 w-32 rounded bg-cream-200/10" />
+                  </span>
+                )}
+              </li>
+              <li>
+                <a
+                  href={`https://instagram.com/${instagramHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={contactLinkClass}
+                >
+                  <Instagram size={18} className="shrink-0" />
+                  @{instagramHandle}
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
 

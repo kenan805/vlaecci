@@ -109,7 +109,7 @@ vlaecci/
 | `API_URL_INTERNAL` | Server-side fetch üçün Nest API ünvanı |
 | `FRONTEND_URL` | NestJS CORS üçün frontend ünvanı |
 | `BACKEND_PUBLIC_URL` | Upload edilmiş şəkillər üçün backend public base URL |
-| `NEXT_PUBLIC_WHATSAPP_NUMBER` | WhatsApp əlaqə nömrəsi (+994...) |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER` | Standart əlaqə nömrəsi (+994...). Admin paneldə **Sayt ayarları**-ndan nömrə təyin olunanda o istifadə olunur |
 | `NEXT_PUBLIC_INSTAGRAM_USERNAME` | Instagram istifadəçi adı |
 
 ## Production

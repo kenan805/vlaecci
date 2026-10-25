@@ -330,6 +330,15 @@ async function initSchema() {
     }
   }
 
+  // Site-wide settings editable from the admin panel (e.g. contact_phone), as key → value.
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `)
+
   await db.query(`UPDATE products SET status = 'active' WHERE status IS NULL OR status = ''`)
 }
 
