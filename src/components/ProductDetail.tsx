@@ -241,13 +241,13 @@ export function ProductDetail({ product, hairTypes }: ProductDetailProps) {
             <button
               type="button"
               onClick={handleAddToCart}
-              className={`flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-medium transition-colors ${
+              className={`flex-1 inline-flex items-center justify-center gap-2 whitespace-nowrap px-5 sm:px-6 py-3.5 rounded-full font-medium transition-colors ${
                 added ? 'bg-accent-sage text-cream-50' : 'bg-brown-300 text-cream-50 hover:bg-brown-400'
               }`}
             >
               {added ? (
                 <>
-                  <Check size={18} /> Səbətə əlavə edildi ✓
+                  <Check size={18} /> Əlavə edildi
                 </>
               ) : (
                 <>
