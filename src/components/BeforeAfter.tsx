@@ -12,7 +12,7 @@ const results = [
   },
   {
     metric: '76%',
-    label: 'Saç dökülməsinin azalması',
+    label: 'Saç tökülməsinin azalması',
     desc: 'Müştəri təcrübələri',
   },
   {

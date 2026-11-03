@@ -41,7 +41,7 @@ export async function runSeed() {
     {
       name: 'Saç Böyümə Serumu',
       slug: 'sac-boyume-serumu',
-      description: 'Saç köklərini gücləndirən, dökülməni azaldan intensiv serum. Dermatoloq təsdiqli formula.',
+      description: 'Saç köklərini gücləndirən, tökülməni azaldan intensiv serum. Dermatoloq təsdiqli formula.',
       price: 45,
       images: ['https://placehold.co/600x800/f5f0e8/5c4033?text=Serum'],
       categorySlug: 'serumlar',
@@ -134,7 +134,7 @@ export async function seedAnalysisData() {
     ($1, 'Əsas saç probleminiz nədir?', 0, true),
     ($2, 'Saç tipiniz necədir?', 1, true),
     ($3, 'Saçlı dərinizin vəziyyəti necədir?', 2, true),
-    ($4, 'Saç dökülmə səviyyəniz necədir?', 3, true)`,
+    ($4, 'Saç tökülmə səviyyəniz necədir?', 3, true)`,
     [q1Id, q2Id, q3Id, q4Id]
   )
 
@@ -150,9 +150,9 @@ export async function seedAnalysisData() {
 
   await query(`INSERT INTO analysis_profiles (id, name, slug, title, summary, explanation, why_text, routine_title, routine_description, result_message, sort_order) VALUES
     ($1, 'Saç tökülməsi', 'sac-tokulmesi', 'Saç tökülməsi profili',
-     'Saç köklərinizi gücləndirmək və dökülməni azaltmaq lazımdır.',
-     'Cavablarınıza əsasən saç folikullarınızın zəifləməsi və dökülmə tendensiyası müşahidə olunur.',
-     'Saç tökülməsi problemi seçdiyiniz və dökülmə səviyyəniz bu nəticəni formalaşdırıb.',
+     'Saç köklərinizi gücləndirmək və tökülməni azaltmaq lazımdır.',
+     'Cavablarınıza əsasən saç folikullarınızın zəifləməsi və tökülmə tendensiyası müşahidə olunur.',
+     'Saç tökülməsi problemi seçdiyiniz və tökülmə səviyyəniz bu nəticəni formalaşdırıb.',
      'Gündəlik qulluq rutini', '1. Böyümə serumu ilə saç köklərinə masaj edin.\n2. Zəiflədici şampundan istifadə edin.\n3. Həftədə 2 dəfə bərpaedici maska tətbiq edin.',
      'Bu rutin 4-6 həftə ərzində nəticə verməyə başlaya bilər.', 0),
     ($2, 'Quru saç', 'quru-sac', 'Quru saç profili',

@@ -20,7 +20,7 @@ export function Testimonials({ items }: { items: Testimonial[] }) {
             Müştərilərimiz nə deyir
           </h2>
           <p className="text-brown-100/80 max-w-2xl mx-auto">
-            Instagram-da bizimlə nəticələrini paylaşan minlərlə qadından bəziləri.
+            Instagram-da bizimlə nəticələrini paylaşan minlərlə müştəridən bəziləri.
           </p>
         </motion.div>
 

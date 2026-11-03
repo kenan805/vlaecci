@@ -39,7 +39,7 @@ export function Hero() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-lg md:text-xl text-brown-100/80 max-w-2xl mx-auto mb-10"
         >
-          Saç dökülməsi və zəif böyümə problemlərinə təbii həll.
+          Saç tökülməsi və zəif böyümə problemlərinə təbii həll.
           Tədqiqat əsasında hazırlanmış serumlar və saç baxım məhsulları.
         </motion.p>
 
