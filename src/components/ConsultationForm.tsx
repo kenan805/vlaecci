@@ -78,7 +78,7 @@ export function ConsultationForm() {
           rows={4}
           value={form.hairIssue}
           onChange={(e) => setForm((f) => ({ ...f, hairIssue: e.target.value }))}
-          placeholder="Saç dökülməsi, zəif böyümə, quru saç və s."
+          placeholder="Saç tökülməsi, zəif böyümə, quru saç və s."
           className="w-full px-4 py-3 rounded-xl border border-sand-200 bg-cream-50 focus:outline-none focus:ring-2 focus:ring-accent-rose/50 resize-none"
         />
       </div>
