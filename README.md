@@ -1,6 +1,6 @@
 # VLAECCI - Hair Care Brand Mini SaaS
 
-Dermatoloq təsdiqli saç baxım məhsulları üçün modern mini SaaS veb saytı. Saç dökülməsi, zəif saç və yavaş böyümə problemi yaşayan qadınlar üçün.
+Dermatoloq təsdiqli saç baxım məhsulları üçün modern mini SaaS veb saytı. Saç tökülməsi, zəif saç və yavaş böyümə problemi yaşayan qadınlar üçün.
 
 ## Xüsusiyyətlər
 

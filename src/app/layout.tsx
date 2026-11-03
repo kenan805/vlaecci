@@ -15,8 +15,8 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: 'VLAECCI | Dermatoloq Təsdiqli Saç Baxımı',
-  description: 'Saç dökülməsi, zəif saç və yavaş böyümə problemi yaşayan qadınlar üçün təbii, dermatoloq təsdiqli saç baxım məhsulları.',
-  keywords: 'saç baxımı, saç serumu, saç dökülməsi, təbii saç baxımı, VLAECCI',
+  description: 'Saç tökülməsi, zəif saç və yavaş böyümə problemi yaşayan qadınlar üçün təbii, dermatoloq təsdiqli saç baxım məhsulları.',
+  keywords: 'saç baxımı, saç serumu, saç tökülməsi, təbii saç baxımı, VLAECCI',
 }
 
 export default function RootLayout({

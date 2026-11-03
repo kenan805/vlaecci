@@ -42,7 +42,7 @@ export function Footer() {
               />
             </div>
             <p className="text-cream-200/80 text-sm max-w-md">
-              Dermatoloq təsdiqli saç baxım məhsulları. Saç dökülməsi, zəif saç və yavaş böyümə problemlərinə təbii həll.
+              Saç tökülməsinə və zəif saç uzanmasına qarşı təbii saç baxımı
             </p>
           </div>
 

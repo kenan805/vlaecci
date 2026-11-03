@@ -9,10 +9,10 @@ import { apiFetch } from '@/lib/api'
 const STEPS = [
   {
     id: 'hairLossLevel',
-    question: 'Saç dökülmə səviyyəniz necədir?',
+    question: 'Saç tökülmə səviyyəniz necədir?',
     options: [
       { value: 'mild', label: 'Yüngül - Biraz saç tökülür' },
-      { value: 'moderate', label: 'Orta - Diqqət çəkən miqdarda dökülmə' },
+      { value: 'moderate', label: 'Orta - Diqqət çəkən miqdarda tökülmə' },
       { value: 'severe', label: 'Ciddi - Güclü saç itkisi' },
     ],
   },
